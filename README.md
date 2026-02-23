@@ -41,6 +41,8 @@ Challenge yourself with randomized prompts, accuracy scoring, and detailed timin
 
 High-quality Morse code audio powered by pygame-ce with custom WAV synthesis for authentic dit/dah tones.
 
+> **Note**: Morse code audio file playback is not yet supported in Training and Testing modes. Audio is currently available only in Learning and Sandbox modes.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -54,7 +56,7 @@ High-quality Morse code audio powered by pygame-ce with custom WAV synthesis for
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/MorseCodeProgram.git
+   git clone https://github.com/sandersirge/MorseCodeProgram.git
    cd MorseCodeProgram
    ```
 
