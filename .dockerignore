@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+env
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Test artifacts
+.pytest_cache
+.coverage
+htmlcov
+report.html
+*.egg-info
+
+# Build
+dist
+build
+*.egg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+output/
+*.wav
+*.mp3

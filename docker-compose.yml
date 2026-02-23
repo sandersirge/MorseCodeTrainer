@@ -1,0 +1,48 @@
+# Docker Compose for Morse Code Trainer
+#
+# Run tests:     docker compose run --rm test
+# Run app (X11): docker compose run --rm app
+# Build:         docker compose build
+
+services:
+  # Test runner service
+  test:
+    build: .
+    command: pytest --tb=short -v
+    environment:
+      - SDL_AUDIODRIVER=dummy
+      - SDL_VIDEODRIVER=dummy
+    volumes:
+      - ./src:/app/src:ro
+      - test-results:/app/src/report.html
+
+  # Application service (requires X11 forwarding on Linux/macOS)
+  # Windows users: Use WSLg or VcXsrv
+  app:
+    build: .
+    command: python /app/run.py
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - SDL_AUDIODRIVER=pulse
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ./output:/app/output
+    # Uncomment for audio passthrough on Linux:
+    # devices:
+    #   - /dev/snd:/dev/snd
+
+  # Development shell
+  dev:
+    build: .
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+    environment:
+      - SDL_AUDIODRIVER=dummy
+      - SDL_VIDEODRIVER=dummy
+    volumes:
+      - .:/app
+    working_dir: /app
+
+volumes:
+  test-results:
