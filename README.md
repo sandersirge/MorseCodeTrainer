@@ -230,14 +230,55 @@ docker compose run --rm app
 
 > **Note**: GUI applications in Docker require X11 forwarding. On Windows, use WSLg or VcXsrv.
 
+## � Packaging & Releases
+
+The application uses [Briefcase](https://briefcase.readthedocs.io/) to create native installers for all platforms.
+
+### Build Locally
+
+```bash
+# Install Briefcase
+pip install briefcase
+
+# Create and build for your platform
+briefcase create
+briefcase build
+briefcase run        # Test the built app
+briefcase package    # Create installer
+```
+
+### Platform-Specific Outputs
+
+| Platform | Command | Output |
+| -------- | ------- | ------ |
+| Windows | `briefcase package windows` | `.msi` installer |
+| macOS | `briefcase package macOS --adhoc-sign` | `.dmg` disk image |
+| Linux | `briefcase package linux appimage` | `.AppImage` portable |
+
+### Automated Releases
+
+Push a version tag to trigger automatic builds:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+GitHub Actions will build installers for all platforms and create a release with downloadable assets.
+
+### Adding Application Icons
+
+Place your icons in `resources/icons/` (see [resources/icons/README.md](resources/icons/README.md) for required formats).
+
 ## 📋 Roadmap
 
 See [DEVPLAN.md](DEVPLAN.md) for detailed development plans.
 
 - [x] CI/CD pipeline with GitHub Actions
 - [x] Docker containerization
+- [x] Briefcase packaging and release automation
+- [ ] Application icons
 - [ ] Accessibility audit (keyboard navigation, light/dark modes)
-- [ ] PyInstaller/Briefcase packaging
 - [ ] Custom deck import/export
 - [ ] Analytics exports (CSV summaries)
 

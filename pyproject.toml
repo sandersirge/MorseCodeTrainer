@@ -1,0 +1,139 @@
+[project]
+name = "morse-code-trainer"
+version = "1.0.0"
+description = "An interactive Morse code learning application"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "ssander"}
+]
+keywords = ["morse", "code", "trainer", "education", "audio"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Desktop Environment",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+dependencies = [
+    "customtkinter>=5.2.2",
+    "pygame-ce>=2.5.6",
+    "ttkbootstrap>=1.19.2",
+    "pillow>=12.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-html>=4.2.0",
+    "briefcase>=0.3.19",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/MorseCodeProgram"
+Repository = "https://github.com/yourusername/MorseCodeProgram"
+Issues = "https://github.com/yourusername/MorseCodeProgram/issues"
+
+[project.gui-scripts]
+morse-trainer = "src.main.python.main:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.wav", "*.mp3", "*.txt", "*.json"]
+
+# Briefcase configuration
+[tool.briefcase]
+project_name = "Morse Code Trainer"
+bundle = "com.morsetrainer"
+version = "1.0.0"
+url = "https://github.com/yourusername/MorseCodeProgram"
+license.file = "LICENSE.md"
+author = "ssander"
+author_email = "your@email.com"
+
+[tool.briefcase.app.morsetrainer]
+formal_name = "Morse Code Trainer"
+description = "An interactive Morse code learning application"
+long_description = """Learn Morse code through guided translations, flashcard drills, free-form practice, and timed assessments. Features audio playback with adjustable speed, pitch, and volume."""
+icon = "resources/icons/morsetrainer"
+sources = ["src"]
+resources = ["src/main/resources"]
+
+requires = [
+    "customtkinter>=5.2.2",
+    "pygame-ce>=2.5.6",
+    "ttkbootstrap>=1.19.2",
+    "pillow>=12.0.0",
+]
+
+[tool.briefcase.app.morsetrainer.macOS]
+universal_build = true
+requires = [
+    "std-nslog~=1.0.0",
+]
+
+[tool.briefcase.app.morsetrainer.linux]
+requires = []
+system_requires = [
+    "libsdl2-dev",
+    "libsdl2-mixer-dev",
+]
+
+[tool.briefcase.app.morsetrainer.linux.system.debian]
+system_requires = [
+    "libsdl2-2.0-0",
+    "libsdl2-mixer-2.0-0",
+]
+
+[tool.briefcase.app.morsetrainer.linux.system.rhel]
+system_requires = [
+    "SDL2",
+    "SDL2_mixer",
+]
+
+[tool.briefcase.app.morsetrainer.linux.system.arch]
+system_requires = [
+    "sdl2",
+    "sdl2_mixer",
+]
+
+[tool.briefcase.app.morsetrainer.linux.appimage]
+manylinux = "manylinux_2_28"
+
+[tool.briefcase.app.morsetrainer.linux.flatpak]
+flatpak_runtime = "org.freedesktop.Platform"
+flatpak_runtime_version = "23.08"
+flatpak_sdk = "org.freedesktop.Sdk"
+
+[tool.briefcase.app.morsetrainer.windows]
+requires = []
+
+# Ruff configuration
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/tests"]
+filterwarnings = [
+    "ignore::pytest.PytestCollectionWarning",
+]
+addopts = "--html=report.html --self-contained-html"

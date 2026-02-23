@@ -10,6 +10,7 @@
 - **Project restructured**: `src/main/python/` for application code, `src/tests/` for test suite, `src/main/resources/` for assets
 - **CI/CD configured**: GitHub Actions workflow runs tests on Python 3.10-3.12 across Ubuntu, Windows, macOS
 - **Docker support added**: Dockerfile and docker-compose.yml for containerized testing and development
+- **Packaging configured**: Briefcase for native installers (MSI, DMG, AppImage) with GitHub Actions release automation
 
 ## Completed
 
@@ -22,16 +23,18 @@
 - [x] Add MIT License
 - [x] Configure GitHub Actions CI pipeline (multi-OS, multi-Python version matrix)
 - [x] Add Docker support (Dockerfile, docker-compose.yml, .dockerignore)
+- [x] Configure Briefcase packaging (pyproject.toml, release workflow)
+- [x] Add GitHub Actions release workflow for automated builds on tags
 
 ## Near-Term Priorities
 
+- Add application icons (see resources/icons/README.md for required formats)
 - Audit accessibility: keyboard traversal, placeholder discoverability, and appearance toggles for light/dark modes
 - Standardise error reporting with typed exceptions and presenter-to-view message mapping
 - Add ruff linting/formatting to CI (currently runs but non-blocking)
 
 ## Longer-Term Goals
 
-- Package the application with PyInstaller or Briefcase, bundling assets and documenting OS-specific steps
 - Support custom deck import/export workflows while keeping controllers stateless
 - Isolate CTk widget creation behind light factories to ease potential alternative front-end experiments
 - Provide optional analytics exports (CSV summaries, instructor reports) without coupling to the UI layer
