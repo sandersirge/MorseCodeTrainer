@@ -88,21 +88,18 @@ requires = [
 
 [tool.briefcase.app.morsetrainer.linux]
 requires = []
+system_requires = []
+
+[tool.briefcase.app.morsetrainer.linux.system.debian]
 system_requires = [
     "libsdl2-dev",
     "libsdl2-mixer-dev",
 ]
 
-[tool.briefcase.app.morsetrainer.linux.system.debian]
-system_requires = [
-    "libsdl2-2.0-0",
-    "libsdl2-mixer-2.0-0",
-]
-
 [tool.briefcase.app.morsetrainer.linux.system.rhel]
 system_requires = [
-    "SDL2",
-    "SDL2_mixer",
+    "SDL2-devel",
+    "SDL2_mixer-devel",
 ]
 
 [tool.briefcase.app.morsetrainer.linux.system.arch]
