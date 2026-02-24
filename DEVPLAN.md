@@ -11,6 +11,7 @@
 - **CI/CD configured**: GitHub Actions workflow runs tests on Python 3.10-3.12 across Ubuntu, Windows, macOS
 - **Docker support added**: Dockerfile and docker-compose.yml for containerized testing and development
 - **Packaging configured**: Briefcase for native installers (MSI, DMG, AppImage) with GitHub Actions release automation
+- **Application icons added**: Full icon set generated (ICO, ICNS, PNG sizes) for all platforms
 
 ## Completed
 
@@ -25,10 +26,16 @@
 - [x] Add Docker support (Dockerfile, docker-compose.yml, .dockerignore)
 - [x] Configure Briefcase packaging (pyproject.toml, release workflow)
 - [x] Add GitHub Actions release workflow for automated builds on tags
+- [x] Add application icons (ICO for Windows, ICNS for macOS, sized PNGs for Linux)
+- [x] Create morsetrainer wrapper package for Briefcase compatibility
+
+## Known Limitations
+
+- Morse code audio playback not yet supported in Training and Testing modes (Sandbox only)
 
 ## Near-Term Priorities
 
-- Add application icons (see resources/icons/README.md for required formats)
+- Add audio playback support to Training and Testing modes
 - Audit accessibility: keyboard traversal, placeholder discoverability, and appearance toggles for light/dark modes
 - Standardise error reporting with typed exceptions and presenter-to-view message mapping
 - Add ruff linting/formatting to CI (currently runs but non-blocking)

@@ -6,7 +6,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    {name = "ssander"}
+    {name = "sandersirge"}
 ]
 keywords = ["morse", "code", "trainer", "education", "audio"]
 classifiers = [
@@ -37,9 +37,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/MorseCodeProgram"
-Repository = "https://github.com/yourusername/MorseCodeProgram"
-Issues = "https://github.com/yourusername/MorseCodeProgram/issues"
+Homepage = "https://github.com/sandersirge/MorseCodeProgram"
+Repository = "https://github.com/sandersirge/MorseCodeProgram"
+Issues = "https://github.com/sandersirge/MorseCodeProgram/issues"
 
 [project.gui-scripts]
 morse-trainer = "src.main.python.main:main"
@@ -60,17 +60,17 @@ include = ["src*"]
 project_name = "Morse Code Trainer"
 bundle = "com.morsetrainer"
 version = "1.0.0"
-url = "https://github.com/yourusername/MorseCodeProgram"
+url = "https://github.com/sandersirge/MorseCodeProgram"
 license.file = "LICENSE.md"
-author = "ssander"
-author_email = "your@email.com"
+author = "sandersirge"
+author_email = "sandersirge@gmail.com"
 
 [tool.briefcase.app.morsetrainer]
 formal_name = "Morse Code Trainer"
 description = "An interactive Morse code learning application"
 long_description = """Learn Morse code through guided translations, flashcard drills, free-form practice, and timed assessments. Features audio playback with adjustable speed, pitch, and volume."""
 icon = "resources/icons/morsetrainer"
-sources = ["src"]
+sources = ["morsetrainer", "src"]
 resources = ["src/main/resources"]
 
 requires = [
