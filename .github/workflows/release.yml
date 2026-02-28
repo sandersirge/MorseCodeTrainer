@@ -28,7 +28,6 @@ jobs:
           - { runner: windows-latest, os: windows, arch: x86, python-arch: x86, ext: zip }
           - { runner: ubuntu-22.04, os: linux, arch: x64, ext: tar.gz }
           - { runner: ubuntu-22.04-arm, os: linux, arch: arm64, ext: tar.gz }
-          - { runner: macos-13, os: macos, arch: x64, ext: dmg }
           - { runner: macos-latest, os: macos, arch: arm64, ext: dmg }
 
     steps:

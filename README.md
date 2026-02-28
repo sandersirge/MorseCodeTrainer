@@ -267,7 +267,6 @@ pyinstaller morsetrainer.spec
 | -------- | ------------ | -------- |
 | Windows | x64 | `MorseCodeTrainer-windows-x64.zip` |
 | Windows | x86 | `MorseCodeTrainer-windows-x86.zip` |
-| macOS | x64 (Intel) | `MorseCodeTrainer-macos-x64.dmg` |
 | macOS | arm64 (Apple Silicon) | `MorseCodeTrainer-macos-arm64.dmg` |
 | Linux | x64 | `MorseCodeTrainer-linux-x64.tar.gz` |
 | Linux | arm64 | `MorseCodeTrainer-linux-arm64.tar.gz` |
@@ -281,10 +280,10 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-GitHub Actions will build executables for all 6 platform/architecture combinations and create a release with:
+GitHub Actions will build executables for all 5 platform/architecture combinations and create a release with:
 
 - **Windows**: `.zip` archives (x64, x86)
-- **macOS**: `.dmg` disk images (Intel, Apple Silicon)
+- **macOS**: `.dmg` disk image (Apple Silicon)
 - **Linux**: `.tar.gz` archives (x64, arm64)
 - **checksums.txt**: SHA256 hashes for all assets
 
@@ -299,7 +298,7 @@ See [DEVPLAN.md](DEVPLAN.md) for detailed development plans.
 - [x] CI/CD pipeline with GitHub Actions
 - [x] Docker containerization
 - [x] PyInstaller packaging and release automation
-- [x] Multi-platform builds (Windows, macOS, Linux × x64, x86, arm64)
+- [x] Multi-platform builds (Windows x64/x86, macOS arm64, Linux x64/arm64)
 - [x] Application icons
 - [ ] Accessibility audit (keyboard navigation, light/dark modes)
 - [ ] Custom deck import/export
