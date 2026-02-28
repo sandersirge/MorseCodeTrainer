@@ -79,13 +79,13 @@ High-quality Morse code audio powered by pygame-ce with custom WAV synthesis for
 3. **Install dependencies**
 
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements/requirements.txt
    ```
 
    For development (includes pytest):
 
    ```bash
-   pip install -r requirements-dev.txt
+   pip install -r requirements/requirements-dev.txt
    ```
 
 ### Running the Application
@@ -113,7 +113,7 @@ pytest --cov=main.python --cov-report=html
 
 ### HTML Test Report
 
-After running tests, an HTML report is generated at `src/report.html`.
+After running tests, an HTML report is generated at `reports/report.html`.
 
 ### Test Categories
 
@@ -130,11 +130,24 @@ After running tests, an HTML report is generated at `src/report.html`.
 ```text
 MorseCodeProgram/
 ├── run.py                    # Application entry point
-├── requirements.txt          # Runtime dependencies
-├── requirements-dev.txt      # Development dependencies (pytest)
+├── morsetrainer.spec         # PyInstaller build spec
+├── pyproject.toml            # Project metadata and tool config
 ├── LICENSE.md                # MIT License
 ├── README.md                 # This file
 ├── DEVPLAN.md                # Development roadmap
+│
+├── docker/                   # Container configuration
+│   ├── Dockerfile
+│   └── docker-compose.yml
+│
+├── requirements/             # Dependency files
+│   ├── requirements.txt      # Runtime dependencies
+│   └── requirements-dev.txt  # Development dependencies
+│
+├── reports/                  # Test report output (generated)
+│
+├── resources/
+│   └── icons/                # Application icons (ICO, ICNS, PNG)
 │
 ├── src/
 │   ├── main/
@@ -210,52 +223,51 @@ Edit `src/main/python/views/theme.py` to modify:
 
 ```bash
 # Build and run tests
-docker build -t morse-trainer .
+docker build -t morse-trainer -f docker/Dockerfile .
 docker run --rm morse-trainer
 
 # Or using docker compose
-docker compose run --rm test
+docker compose -f docker/docker-compose.yml run --rm test
 ```
 
 ### Development Shell
 
 ```bash
-docker compose run --rm dev
+docker compose -f docker/docker-compose.yml run --rm dev
 ```
 
 ### Run Application (Linux with X11)
 
 ```bash
 xhost +local:docker
-docker compose run --rm app
+docker compose -f docker/docker-compose.yml run --rm app
 ```
 
 > **Note**: GUI applications in Docker require X11 forwarding. On Windows, use WSLg or VcXsrv.
 
-## � Packaging & Releases
+## 📦 Packaging & Releases
 
-The application uses [Briefcase](https://briefcase.readthedocs.io/) to create native installers for all platforms.
+The application uses [PyInstaller](https://pyinstaller.org/) to create standalone executables for all platforms.
 
 ### Build Locally
 
 ```bash
-# Install Briefcase
-pip install briefcase
+# Install PyInstaller
+pip install pyinstaller
 
-# Create and build for your platform
-briefcase create
-briefcase build
-briefcase run        # Test the built app
-briefcase package    # Create installer
+# Build for your platform
+pyinstaller morsetrainer.spec
+
+# The built application will be in dist/MorseCodeTrainer/
 ```
 
 ### Platform-Specific Outputs
 
-| Platform | Command | Output |
-| -------- | ------- | ------ |
-| Windows | `briefcase package windows` | `.msi` installer |
-| macOS | `briefcase package macOS --adhoc-sign` | `.dmg` disk image |
-| Linux | `briefcase package linux appimage` | `.AppImage` portable |
+| Platform | Output | Location |
+| -------- | ------ | -------- |
+| Windows | Executable folder | `dist/MorseCodeTrainer/MorseCodeTrainer.exe` |
+| macOS | Application bundle | `dist/Morse Code Trainer.app` |
+| Linux | Executable folder | `dist/MorseCodeTrainer/MorseCodeTrainer` |
 
 ### Automated Releases
 
@@ -266,7 +278,11 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-GitHub Actions will build installers for all platforms and create a release with downloadable assets.
+GitHub Actions will build executables for all platforms and create a release with downloadable assets:
+
+- **Windows**: `.zip` archive
+- **macOS**: `.dmg` disk image
+- **Linux**: `.tar.gz` archive
 
 ### Adding Application Icons
 
@@ -278,8 +294,8 @@ See [DEVPLAN.md](DEVPLAN.md) for detailed development plans.
 
 - [x] CI/CD pipeline with GitHub Actions
 - [x] Docker containerization
-- [x] Briefcase packaging and release automation
-- [ ] Application icons
+- [x] PyInstaller packaging and release automation
+- [x] Application icons
 - [ ] Accessibility audit (keyboard navigation, light/dark modes)
 - [ ] Custom deck import/export
 - [ ] Analytics exports (CSV summaries)

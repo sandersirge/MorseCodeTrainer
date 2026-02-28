@@ -7,33 +7,39 @@
 services:
   # Test runner service
   test:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     command: pytest --tb=short -v
     environment:
       - SDL_AUDIODRIVER=dummy
       - SDL_VIDEODRIVER=dummy
     volumes:
-      - ./src:/app/src:ro
-      - test-results:/app/src/report.html
+      - ../src:/app/src:ro
+      - ../reports:/app/reports
 
   # Application service (requires X11 forwarding on Linux/macOS)
   # Windows users: Use WSLg or VcXsrv
   app:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     command: python /app/run.py
     environment:
       - DISPLAY=${DISPLAY:-:0}
       - SDL_AUDIODRIVER=pulse
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:ro
-      - ./output:/app/output
+      - ../output:/app/output
     # Uncomment for audio passthrough on Linux:
     # devices:
     #   - /dev/snd:/dev/snd
 
   # Development shell
   dev:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     command: /bin/bash
     stdin_open: true
     tty: true
@@ -41,8 +47,5 @@ services:
       - SDL_AUDIODRIVER=dummy
       - SDL_VIDEODRIVER=dummy
     volumes:
-      - .:/app
+      - ..:/app
     working_dir: /app
-
-volumes:
-  test-results:

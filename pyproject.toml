@@ -33,7 +33,7 @@ dependencies = [
 dev = [
     "pytest>=9.0.2",
     "pytest-html>=4.2.0",
-    "briefcase>=0.3.19",
+    "pyinstaller>=6.0.0",
 ]
 
 [project.urls]
@@ -55,7 +55,8 @@ include = ["src*"]
 [tool.setuptools.package-data]
 "*" = ["*.wav", "*.mp3", "*.txt", "*.json"]
 
-# Briefcase configuration
+# Briefcase configuration (DEPRECATED - using PyInstaller instead)
+# Kept for reference in case of future BeeWare/Toga migration
 [tool.briefcase]
 project_name = "Morse Code Trainer"
 bundle = "com.morsetrainer"
@@ -94,22 +95,28 @@ system_requires = []
 system_requires = [
     "libsdl2-dev",
     "libsdl2-mixer-dev",
+    "python3-tk",
 ]
 
 [tool.briefcase.app.morsetrainer.linux.system.rhel]
 system_requires = [
     "SDL2-devel",
     "SDL2_mixer-devel",
+    "python3-tkinter",
 ]
 
 [tool.briefcase.app.morsetrainer.linux.system.arch]
 system_requires = [
     "sdl2",
     "sdl2_mixer",
+    "tk",
 ]
 
 [tool.briefcase.app.morsetrainer.linux.appimage]
 manylinux = "manylinux_2_28"
+system_requires = [
+    "python3-tkinter",
+]
 
 [tool.briefcase.app.morsetrainer.linux.flatpak]
 flatpak_runtime = "org.freedesktop.Platform"
@@ -117,7 +124,10 @@ flatpak_runtime_version = "23.08"
 flatpak_sdk = "org.freedesktop.Sdk"
 
 [tool.briefcase.app.morsetrainer.windows]
-requires = []
+requires = [
+    # Ensure tkinter is available
+    "tk",
+]
 
 # Ruff configuration
 [tool.ruff]
@@ -133,4 +143,4 @@ testpaths = ["src/tests"]
 filterwarnings = [
     "ignore::pytest.PytestCollectionWarning",
 ]
-addopts = "--html=report.html --self-contained-html"
+addopts = "--html=../reports/report.html --self-contained-html"

@@ -14,6 +14,9 @@ on:
 permissions:
   contents: write
 
+env:
+  APP_NAME: MorseCodeTrainer
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -29,19 +32,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install briefcase
+          pip install -r requirements/requirements.txt
+          pip install pyinstaller
 
       - name: Build Windows app
+        run: pyinstaller morsetrainer.spec
+
+      - name: Create Windows ZIP
         run: |
-          briefcase create windows
-          briefcase build windows
-          briefcase package windows
+          Compress-Archive -Path "dist/${{ env.APP_NAME }}" -DestinationPath "dist/${{ env.APP_NAME }}-windows-x64.zip"
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
-          path: dist/*.msi
+          name: windows-zip
+          path: dist/${{ env.APP_NAME }}-windows-x64.zip
           retention-days: 30
 
   build-macos:
@@ -58,19 +63,22 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install briefcase
+          pip install -r requirements/requirements.txt
+          pip install pyinstaller
 
       - name: Build macOS app
+        run: pyinstaller morsetrainer.spec
+
+      - name: Create macOS DMG
         run: |
-          briefcase create macOS
-          briefcase build macOS
-          briefcase package macOS --adhoc-sign
+          # Create a DMG from the .app bundle
+          hdiutil create -volname "Morse Code Trainer" -srcfolder "dist/Morse Code Trainer.app" -ov -format UDZO "dist/${{ env.APP_NAME }}-macos-x64.dmg"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-app
-          path: dist/*.dmg
+          name: macos-dmg
+          path: dist/${{ env.APP_NAME }}-macos-x64.dmg
           retention-days: 30
 
   build-linux:
@@ -87,24 +95,27 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev libfuse2
+          sudo apt-get install -y python3-tk libsdl2-dev libsdl2-mixer-dev
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install briefcase
+          pip install -r requirements/requirements.txt
+          pip install pyinstaller
 
-      - name: Build Linux AppImage
+      - name: Build Linux app
+        run: pyinstaller morsetrainer.spec
+
+      - name: Create Linux tarball
         run: |
-          briefcase create linux appimage
-          briefcase build linux appimage
-          briefcase package linux appimage
+          cd dist
+          tar -czvf "${{ env.APP_NAME }}-linux-x64.tar.gz" "${{ env.APP_NAME }}"
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-appimage
-          path: dist/*.AppImage
+          name: linux-tarball
+          path: dist/${{ env.APP_NAME }}-linux-x64.tar.gz
           retention-days: 30
 
   create-release:
@@ -124,9 +135,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/**/*.msi
+            dist/**/*.zip
             dist/**/*.dmg
-            dist/**/*.AppImage
+            dist/**/*.tar.gz
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}

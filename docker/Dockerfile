@@ -1,6 +1,6 @@
 # Morse Code Trainer - Docker Image
 # 
-# Build: docker build -t morse-trainer .
+# Build: docker build -t morse-trainer -f docker/Dockerfile .
 # Run tests: docker run --rm morse-trainer pytest
 # Run app (requires X11): docker run --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix morse-trainer
 
@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy requirements first for better caching
-COPY requirements.txt requirements-dev.txt ./
+COPY requirements/requirements.txt requirements/requirements-dev.txt ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements-dev.txt
