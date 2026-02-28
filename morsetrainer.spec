@@ -19,14 +19,13 @@ elif sys.platform == 'darwin':
 else:
     icon_file = None
 
-# Collect data files (resources)
-datas = [
-    (str(RESOURCES_PATH / 'letters'), 'src/main/resources/letters'),
-    (str(RESOURCES_PATH / 'numbers'), 'src/main/resources/numbers'),
-    (str(RESOURCES_PATH / 'symbols'), 'src/main/resources/symbols'),
-    (str(RESOURCES_PATH / 'testing'), 'src/main/resources/testing'),
-    (str(RESOURCES_PATH / 'translation'), 'src/main/resources/translation'),
-]
+# Collect data files (resources) — skip directories that are empty or missing
+_resource_dirs = ['letters', 'numbers', 'symbols', 'testing', 'translation']
+datas = []
+for _name in _resource_dirs:
+    _dir = RESOURCES_PATH / _name
+    if _dir.is_dir() and any(_dir.iterdir()):
+        datas.append((str(_dir), f'src/main/resources/{_name}'))
 
 a = Analysis(
     ['run.py'],
