@@ -33,11 +33,17 @@ jobs:
 
   build:
     needs: lint
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - { runner: windows-latest, os: windows, arch: x64, python-arch: x64 }
+          - { runner: windows-latest, os: windows, arch: x86, python-arch: x86 }
+          - { runner: ubuntu-22.04, os: linux, arch: x64 }
+          - { runner: ubuntu-22.04-arm, os: linux, arch: arm64 }
+          - { runner: macos-13, os: macos, arch: x64 }
+          - { runner: macos-latest, os: macos, arch: arm64 }
 
     steps:
       - name: Checkout code
@@ -47,9 +53,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          architecture: ${{ matrix.python-arch || '' }}
 
       - name: Install system dependencies (Linux)
-        if: runner.os == 'Linux'
+        if: matrix.os == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-tk libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libsdl2-ttf-dev
@@ -58,9 +65,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements/*.txt') }}
+          key: ${{ runner.os }}-${{ matrix.arch }}-pip-${{ hashFiles('requirements/*.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-${{ matrix.arch }}-pip-
 
       - name: Install dependencies
         run: |
@@ -86,7 +93,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
 
     steps:
       - name: Checkout code
