@@ -1,4 +1,4 @@
-﻿"""Re-export shim retained for import compatibility.
+"""Re-export shim retained for import compatibility.
 
 Content has been split into:
     views/translation_section.py  - TranslationSection

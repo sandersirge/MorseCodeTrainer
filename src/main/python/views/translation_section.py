@@ -87,7 +87,11 @@ class TranslationSection:
 		mode_card.columnconfigure(0, weight=1)
 
 		make_label(
-			mode_card, "Tõlkesuund", font=self._body_font, text_color=get_colors().text_muted, justify="left"
+			mode_card,
+			"Tõlkesuund",
+			font=self._body_font,
+			text_color=get_colors().text_muted,
+			justify="left",
 		).grid(row=0, column=0, pady=(0, 12))
 
 		_sc = get_colors()

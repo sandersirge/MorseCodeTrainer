@@ -222,7 +222,11 @@ class AudioSection:
 		column_frame.columnconfigure(0, weight=1)
 
 		make_label(
-			column_frame, title, font=self._body_font, text_color=get_colors().text_muted, justify="center"
+			column_frame,
+			title,
+			font=self._body_font,
+			text_color=get_colors().text_muted,
+			justify="center",
 		).grid(row=0, column=0, pady=(0, 12))
 		slider = ctk.CTkSlider(
 			column_frame,
@@ -236,7 +240,9 @@ class AudioSection:
 		)
 		slider.grid(row=1, column=0, sticky="ns", pady=6)
 
-		value_label = make_label(column_frame, "", font=self._hint_font, text_color=get_colors().text_muted)
+		value_label = make_label(
+			column_frame, "", font=self._hint_font, text_color=get_colors().text_muted
+		)
 		value_label.grid(row=2, column=0, pady=(12, 0))
 
 		self._slider_bindings[key] = SliderBinding(

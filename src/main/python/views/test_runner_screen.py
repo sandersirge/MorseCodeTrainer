@@ -252,7 +252,9 @@ class TestRunnerScreen:
 		self._backdrop = prepare_backdrop(self.root)
 		colors = get_colors()
 
-		self._card = make_card(self._backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
+		self._card = make_card(
+			self._backdrop, fg_color=colors.card_bg, border_color=colors.card_border
+		)
 		self._card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.86, relheight=0.82)
 
 		self._card.grid_rowconfigure(1, weight=1)

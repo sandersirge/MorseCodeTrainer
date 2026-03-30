@@ -152,7 +152,9 @@ class FlashcardView:
 		state = self.state
 
 		# Only rebuild UI if widgets don't exist yet
-		need_initial_build = not self._built or self.progress_bar is None or self.display_label is None
+		need_initial_build = (
+			not self._built or self.progress_bar is None or self.display_label is None
+		)
 
 		if need_initial_build:
 			self._rendered_category = state.category
@@ -199,7 +201,9 @@ class FlashcardView:
 		self._backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
 		self._backdrop.pack(fill="both", expand=True)
 
-		self._card = make_card(self._backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
+		self._card = make_card(
+			self._backdrop, fg_color=colors.card_bg, border_color=colors.card_border
+		)
 		self._card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.78, relheight=0.78)
 
 		self._card.grid_rowconfigure(2, weight=1)
@@ -222,7 +226,10 @@ class FlashcardView:
 		self._display_frame = make_frame(self._card, fg_color=colors.section_bg, corner_radius=20)
 		self._display_frame.grid(row=2, column=0, padx=48, pady=(0, 32), sticky="nsew")
 		self.display_label = make_label(
-			self._display_frame, state.display_text, font=self._display_font, text_color=colors.text_primary
+			self._display_frame,
+			state.display_text,
+			font=self._display_font,
+			text_color=colors.text_primary,
 		)
 		self.display_label.pack(expand=True, padx=40, pady=24)
 

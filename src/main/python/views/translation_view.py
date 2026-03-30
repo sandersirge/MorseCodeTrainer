@@ -204,7 +204,9 @@ class TranslationView:
 		previous_mode = self.mode
 
 		# Only rebuild UI if widgets don't exist yet
-		need_initial_build = not self._built or self.prompt_label is None or self.progress_bar is None
+		need_initial_build = (
+			not self._built or self.prompt_label is None or self.progress_bar is None
+		)
 
 		self.mode = state.mode
 		self.title_text = state.title
@@ -230,7 +232,9 @@ class TranslationView:
 		self._backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
 		self._backdrop.pack(fill="both", expand=True)
 
-		self._card = make_card(self._backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
+		self._card = make_card(
+			self._backdrop, fg_color=colors.card_bg, border_color=colors.card_border
+		)
 		self._card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.82, relheight=0.84)
 
 		self._card.grid_columnconfigure(0, weight=1)
@@ -292,7 +296,9 @@ class TranslationView:
 		)
 		self.feedback_label.grid(row=5, column=0, pady=(0, 12))
 
-		self.hint_label = make_label(self._card, "", font=self._hint_font, text_color=colors.text_primary)
+		self.hint_label = make_label(
+			self._card, "", font=self._hint_font, text_color=colors.text_primary
+		)
 		self.hint_label.grid(row=6, column=0, pady=(0, 16))
 
 		self._actions = make_frame(self._card, fg_color="transparent")
