@@ -19,6 +19,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Education",
     "Topic :: Multimedia :: Sound/Audio",
 ]
@@ -31,9 +33,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "hypothesis>=6.0.0",
     "pytest>=9.0.2",
     "pytest-html>=4.2.0",
     "pyinstaller>=6.0.0",
+    "ruff>=0.4.0",
 ]
 
 [project.urls]
@@ -134,9 +138,12 @@ requires = [
 target-version = "py310"
 line-length = 100
 
+[tool.ruff.format]
+indent-style = "tab"
+
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP"]
-ignore = ["E501"]
+ignore = ["E501", "W191"]
 
 [tool.pytest.ini_options]
 testpaths = ["src/tests"]
@@ -144,3 +151,6 @@ filterwarnings = [
     "ignore::pytest.PytestCollectionWarning",
 ]
 addopts = "--html=../reports/report.html --self-contained-html"
+markers = [
+    "smoke: fast bootstrap sanity checks (deselect with '-m not smoke')",
+]

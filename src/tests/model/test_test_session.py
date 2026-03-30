@@ -1,6 +1,14 @@
 """Tests for TestSession model."""
 import pytest
-from src.main.python.model.test_session import TestSession, TestResponse, TestSummary, _grade_and_feedback, _speed_from_times
+
+from src.main.python.exceptions import MismatchedDataError, SessionInvalidStateError
+from src.main.python.model.test_session import (
+    TestResponse,
+    TestSession,
+    TestSummary,
+    _grade_and_feedback,
+    _speed_from_times,
+)
 
 
 class TestTestSessionInit:
@@ -11,7 +19,7 @@ class TestTestSessionInit:
         assert session.total_questions == 2
 
     def test_init_mismatched_lengths_raises(self):
-        with pytest.raises(ValueError, match="equal numbers"):
+        with pytest.raises(MismatchedDataError):
             TestSession(prompts=["A"], answers=[".-", "-..."])
 
     def test_init_empty(self):
@@ -34,9 +42,9 @@ class TestTestSessionNavigation:
         assert not test_session.has_previous_question()
 
     def test_next_question_advances(self, test_session):
-        first_prompt = test_session.current_prompt()
+        test_session.current_prompt()
         test_session.next_question()
-        second_prompt = test_session.current_prompt()
+        test_session.current_prompt()
         # Due to shuffle, we just verify navigation happened
         assert test_session.current_position() == 1
 
@@ -100,7 +108,7 @@ class TestTestSessionRecordResponse:
 
     def test_record_response_without_active_raises(self):
         session = TestSession(prompts=[], answers=[])
-        with pytest.raises(RuntimeError, match="active question"):
+        with pytest.raises(SessionInvalidStateError):
             session.record_response("answer", 1.0)
 
     def test_current_answer_empty_when_not_answered(self, test_session):

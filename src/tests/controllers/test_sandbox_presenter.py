@@ -1,8 +1,14 @@
 """Tests for TranslationSandboxPresenter controller."""
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-from src.main.python.controllers.translation_sandbox_controller import TranslationSandboxPresenter, SandboxState
+from unittest.mock import patch
+
+import pytest
+
+from src.main.python.controllers.translation_sandbox_controller import (
+    SandboxState,
+    TranslationSandboxPresenter,
+)
+from src.main.python.exceptions import InvalidModeError, NoAudioContentError
 
 
 @pytest.fixture
@@ -77,7 +83,7 @@ class TestTranslationSandboxPresenterSetMode:
         assert state.mode == "morse_to_text"
 
     def test_set_mode_invalid_raises(self, presenter):
-        with pytest.raises(ValueError, match="Unsupported mode"):
+        with pytest.raises(InvalidModeError):
             presenter.set_mode("invalid_mode")
 
     def test_set_mode_same_mode_no_change(self, presenter):
@@ -116,7 +122,7 @@ class TestTranslationSandboxPresenterTranslate:
     def test_translate_invalid_character_sets_error(self, presenter):
         state = presenter.translate("©")
         assert state.error_message is not None
-        assert "Unsupported" in state.error_message
+        assert "pole toetatud" in state.error_message
 
     def test_translate_stores_input(self, presenter):
         presenter.translate("HELLO")
@@ -127,7 +133,7 @@ class TestTranslationSandboxPresenterGenerateAudio:
     """Tests for generate_audio method."""
 
     def test_generate_audio_without_content_raises(self, presenter):
-        with pytest.raises(ValueError, match="Morse content"):
+        with pytest.raises(NoAudioContentError):
             presenter.generate_audio()
 
     @patch("src.main.python.controllers.translation_sandbox_controller.synthesize_morse_audio")
@@ -161,11 +167,11 @@ class TestTranslationSandboxPresenterSaveAudio:
     """Tests for save_audio methods."""
 
     def test_save_audio_without_file_raises(self, presenter):
-        with pytest.raises(ValueError):
+        with pytest.raises(NoAudioContentError):
             presenter.save_audio_to_output()
 
     def test_save_audio_as_without_file_raises(self, presenter):
-        with pytest.raises(ValueError):
+        with pytest.raises(NoAudioContentError):
             presenter.save_audio_as(Path("/tmp/output.wav"))
 
     @patch("shutil.copy2")

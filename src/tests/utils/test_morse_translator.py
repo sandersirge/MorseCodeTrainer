@@ -1,6 +1,8 @@
 """Tests for morse_translator utility functions."""
 import pytest
-from src.main.python.utils.morse_translator import convert_text_to_morse, convert_morse_to_text
+
+from src.main.python.exceptions import UnsupportedCharacterError, UnsupportedMorseSymbolError
+from src.main.python.utils.morse_translator import convert_morse_to_text, convert_text_to_morse
 
 
 class TestConvertTextToMorse:
@@ -65,7 +67,7 @@ class TestConvertTextToMorse:
         assert convert_text_to_morse("Š") == "----"
 
     def test_unsupported_character_raises(self):
-        with pytest.raises(ValueError, match="Unsupported character"):
+        with pytest.raises(UnsupportedCharacterError):
             convert_text_to_morse("©")
 
     def test_consecutive_spaces_in_input(self):
@@ -130,7 +132,7 @@ class TestConvertMorseToText:
         assert result == "Š"
 
     def test_unsupported_morse_raises(self):
-        with pytest.raises(ValueError, match="Unsupported Morse symbol"):
+        with pytest.raises(UnsupportedMorseSymbolError):
             convert_morse_to_text(".-.-.-.-.-.")
 
     def test_single_space_separates_letters(self):

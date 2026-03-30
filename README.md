@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-337%20passing-brightgreen.svg)](#-testing)
+[![Tests](https://img.shields.io/badge/tests-638%20passing-brightgreen.svg)](#-testing)
 
 An interactive Morse code learning application built with Python and CustomTkinter. Learn Morse code through guided translations, flashcard drills, free-form practice, and timed assessments.
 
@@ -96,13 +96,20 @@ python run.py
 
 ## 🧪 Testing
 
-The project includes a comprehensive test suite with **337 tests** covering models, controllers, services, and utilities.
+The project includes a comprehensive test suite with **638 tests** covering models, controllers, services, utilities, resources, and exceptions.
 
 ### Run Tests
 
 ```bash
 cd src
 pytest
+```
+
+### Run Only Smoke Tests (fast, < 1 s)
+
+```bash
+cd src
+pytest -m smoke -q
 ```
 
 ### Run with Coverage Report
@@ -117,13 +124,15 @@ After running tests, an HTML report is generated at `reports/report.html`.
 
 ### Test Categories
 
-| Category             | Description                         |
-| -------------------- | ----------------------------------- |
-| `tests/model/`       | Domain entities and session state   |
-| `tests/controllers/` | Presenter logic and UI coordination |
-| `tests/services/`    | Audio, data providers, settings     |
-| `tests/utils/`       | Morse translator utilities          |
-| `tests/resources/`   | Asset loading and constants         |
+| Category                | Description                                         |
+| ----------------------- | --------------------------------------------------- |
+| `tests/model/`          | Domain entities and session state                   |
+| `tests/controllers/`    | Presenter logic and UI coordination                 |
+| `tests/services/`       | Audio, data providers, settings                     |
+| `tests/utils/`          | Morse translator — unit, parametrized, and property |
+| `tests/resources/`      | Asset loading and constants                         |
+| `tests/exceptions/`     | Exception hierarchy, error codes, user messages     |
+| `tests/test_smoke.py`   | Fast bootstrap sanity checks (`pytest -m smoke`)    |
 
 ## 📁 Project Structure
 
@@ -155,10 +164,24 @@ MorseCodeProgram/
 │   │   │   ├── application.py
 │   │   │   ├── main.py
 │   │   │   ├── controllers/  # MVC presenters
+│   │   │   ├── exceptions/   # Typed exception hierarchy
+│   │   │   │   ├── base.py       # ErrorCode, MorseTrainerError
+│   │   │   │   ├── session.py
+│   │   │   │   ├── translation.py
+│   │   │   │   ├── audio.py
+│   │   │   │   └── validation.py
 │   │   │   ├── model/        # Domain entities & state
+│   │   │   ├── resources/    # Constants & data tables
+│   │   │   │   ├── morse_data.py     # Symbol tables & lookup maps
+│   │   │   │   ├── audio_data.py     # Audio asset path maps
+│   │   │   │   ├── exercise_data.py  # Training/test samples
+│   │   │   │   └── constants.py      # Re-export shim
 │   │   │   ├── services/     # Audio, data providers
 │   │   │   ├── utils/        # Morse translator
 │   │   │   └── views/        # CustomTkinter UI
+│   │   │       ├── translation_section.py
+│   │   │       ├── audio_section.py
+│   │   │       └── ...
 │   │   │
 │   │   └── resources/        # Audio files & assets
 │   │       ├── letters/      # Letter audio files
@@ -169,6 +192,8 @@ MorseCodeProgram/
 │   │
 │   └── tests/                # pytest test suite
 │       ├── conftest.py       # Shared fixtures
+│       ├── exceptions/       # Exception hierarchy tests
+│       ├── test_smoke.py     # Bootstrap sanity checks
 │       └── ...
 │
 └── output/                   # Generated files (exports, saves)
@@ -187,8 +212,10 @@ The application follows an **MVC-style architecture**:
 
 - **Immutable State**: Models expose frozen dataclass states to prevent accidental mutation
 - **Decoupled Audio**: pygame-ce integration is mocked in tests for CI stability
-- **Theme Tokens**: Centralized font/color constants in `views/theme.py`
-- **Componentized Views**: UI sections are modular for easy framework swaps
+- **Theme Tokens**: Centralized font/color constants in `views/theme.py`; all views call `get_colors()` at render time for correct light/dark theming
+- **Typed Exceptions**: `exceptions/` package provides an `ErrorCode` enum, Estonian user-facing messages, and a `get_user_message()` helper — no raw strings in error paths
+- **Componentized Views**: UI sections are modular (`translation_section.py`, `audio_section.py`) for easy framework swaps
+- **Separated Resource Concerns**: `resources/` split into `morse_data`, `audio_data`, and `exercise_data` modules
 
 ## 🛠️ Development
 
@@ -300,7 +327,11 @@ See [DEVPLAN.md](DEVPLAN.md) for detailed development plans.
 - [x] PyInstaller packaging and release automation
 - [x] Multi-platform builds (Windows x64/x86, macOS arm64, Linux x64/arm64)
 - [x] Application icons
-- [ ] Accessibility audit (keyboard navigation, light/dark modes)
+- [x] Accessibility improvements (keyboard navigation, light/dark mode)
+- [x] Typed exception hierarchy with Estonian user messages
+- [x] Property-based tests with Hypothesis
+- [x] Smoke test suite (`pytest -m smoke`)
+- [ ] Audio playback in Training and Testing modes
 - [ ] Custom deck import/export
 - [ ] Analytics exports (CSV summaries)
 

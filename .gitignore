@@ -20,8 +20,10 @@ venv/
 .venv/
 env/
 
-# pytest
+# pytest / hypothesis / ruff
 .pytest_cache/
+.hypothesis/
+.ruff_cache/
 .coverage
 htmlcov/
 reports/*.html

@@ -1,5 +1,6 @@
 """Tests for AudioSettings service."""
 import pytest
+
 from src.main.python.services.audio_settings import AudioSettings, _clamp
 
 

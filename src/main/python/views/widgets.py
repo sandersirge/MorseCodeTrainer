@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import customtkinter as ctk
 
@@ -19,12 +20,10 @@ from .theme import (
 	FONT_SIZE_XL,
 	SURFACE_ACCENT,
 	SURFACE_DARK,
-	SURFACE_LIGHT,
 	TEXT_DARK,
-	TEXT_MUTED,
 	TEXT_PRIMARY,
+	get_colors,
 )
-
 
 # ---------------------------------------------------------------------------
 # Shared styling tokens (deprecated - use theme.py constants)
@@ -50,10 +49,95 @@ BUTTON_STYLES: dict[str, ButtonStyle] = {
 
 
 # ---------------------------------------------------------------------------
+# Keyboard Navigation Helpers
+# ---------------------------------------------------------------------------
+
+
+def setup_keyboard_navigation(widgets: list[ctk.CTkBaseClass]) -> None:
+	"""Configure Tab order for a list of widgets.
+
+	Widgets will be traversable in the order provided.
+	Enter key will activate buttons.
+	"""
+	for i, widget in enumerate(widgets):
+		# Enable focus
+		try:
+			widget.configure(takefocus=True)
+		except Exception:
+			pass
+
+		# Add Enter key binding for buttons
+		if isinstance(widget, ctk.CTkButton):
+			widget.bind("<Return>", lambda e, w=widget: _invoke_button(w))
+			widget.bind("<space>", lambda e, w=widget: _invoke_button(w))
+
+
+def _invoke_button(button: ctk.CTkButton) -> None:
+	"""Safely invoke a button's command."""
+	try:
+		command = button.cget("command")
+		if command:
+			command()
+	except Exception:
+		pass
+
+
+def add_focus_highlight(widget: ctk.CTkBaseClass, focus_color: str | None = None) -> None:
+	"""Add visual focus indicator to a widget.
+
+	When focused, the widget gets a colored border/ring.
+	If focus_color is None the current theme's focus_ring color is read at
+	focus time so theme switches are always reflected correctly.
+	"""
+	original_border_color = None
+	original_border_width = None
+
+	try:
+		original_border_color = widget.cget("border_color")
+		original_border_width = widget.cget("border_width")
+	except Exception:
+		return
+
+	def on_focus_in(event: Any) -> None:
+		try:
+			ring = focus_color if focus_color is not None else get_colors().focus_ring
+			widget.configure(border_color=ring, border_width=2)
+		except Exception:
+			pass
+
+	def on_focus_out(event: Any) -> None:
+		try:
+			widget.configure(
+				border_color=original_border_color or "transparent",
+				border_width=original_border_width or 0,
+			)
+		except Exception:
+			pass
+
+	widget.bind("<FocusIn>", on_focus_in, add="+")
+	widget.bind("<FocusOut>", on_focus_out, add="+")
+
+
+def bind_escape_to_back(root: ctk.CTk, callback: Callable[[], None]) -> str:
+	"""Bind Escape key to a back/cancel action. Returns binding ID."""
+	return root.bind("<Escape>", lambda e: callback())
+
+
+def unbind_escape(root: ctk.CTk, binding_id: str) -> None:
+	"""Remove an Escape key binding."""
+	try:
+		root.unbind("<Escape>", binding_id)
+	except Exception:
+		pass
+
+
+# ---------------------------------------------------------------------------
 # Font utilities
 
 
-def make_font(*, size: int, weight: str = "normal", family: str = FONT_FAMILY_DEFAULT) -> ctk.CTkFont:
+def make_font(
+	*, size: int, weight: str = "normal", family: str = FONT_FAMILY_DEFAULT
+) -> ctk.CTkFont:
 	"""Return a configured CTkFont with the shared defaults."""
 
 	normalized = weight.lower()
@@ -128,18 +212,22 @@ def make_label(
 	font_size: int = 18,
 	weight: str = "normal",
 	font: ctk.CTkFont | None = None,
-	text_color: str = TEXT_PRIMARY,
+	text_color: str | None = None,
 	wraplength: int | None = None,
 	justify: str = "center",
 	**options,
 ) -> ctk.CTkLabel:
-	"""Create a CTkLabel using the shared typography and colour tokens."""
+	"""Create a CTkLabel using the shared typography and colour tokens.
+
+	text_color defaults to the current theme's primary text color when None.
+	"""
+	resolved_color = text_color if text_color is not None else get_colors().text_primary
 
 	label = ctk.CTkLabel(
 		parent,
 		text=text,
 		font=font or make_font(size=font_size, weight=weight),
-		text_color=text_color,
+		text_color=resolved_color,
 		justify=justify,
 		**options,
 	)
@@ -342,4 +430,19 @@ __all__ = [
 	"make_progress_bar",
 	"BUTTON_STYLES",
 	"ButtonStyle",
+	# Keyboard navigation
+	"setup_keyboard_navigation",
+	"add_focus_highlight",
+	"bind_escape_to_back",
+	"unbind_escape",
+	# Font presets
+	"font_title",
+	"font_subtitle",
+	"font_body",
+	"font_muted",
+	"font_button",
+	"font_button_large",
+	"font_callout",
+	"font_mono",
+	"font_timer",
 ]

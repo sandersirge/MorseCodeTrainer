@@ -4,5 +4,5 @@ from .application import build_application
 
 
 def main() -> None:
-    application = build_application()
-    application.run()
+	application = build_application()
+	application.run()

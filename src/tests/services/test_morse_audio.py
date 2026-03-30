@@ -1,8 +1,10 @@
 """Tests for morse_audio service."""
-import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-from src.main.python.services.morse_audio import synthesize_morse_audio, _parse_morse_sequence
+
+import pytest
+
+from src.main.python.exceptions import NoAudioContentError, UnsupportedMorseSymbolError
+from src.main.python.services.morse_audio import _parse_morse_sequence, synthesize_morse_audio
 
 
 class TestParseMorseSequence:
@@ -46,7 +48,7 @@ class TestParseMorseSequence:
         assert ("gap", 7) in result
 
     def test_invalid_symbol_raises(self):
-        with pytest.raises(ValueError, match="Unsupported symbol"):
+        with pytest.raises(UnsupportedMorseSymbolError):
             list(_parse_morse_sequence(".-x"))
 
 
@@ -54,11 +56,11 @@ class TestSynthesizeMorseAudio:
     """Tests for synthesize_morse_audio function."""
 
     def test_empty_morse_raises(self):
-        with pytest.raises(ValueError, match="No Morse content"):
+        with pytest.raises(NoAudioContentError):
             synthesize_morse_audio("")
 
     def test_whitespace_morse_raises(self):
-        with pytest.raises(ValueError, match="No Morse content"):
+        with pytest.raises(NoAudioContentError):
             synthesize_morse_audio("   ")
 
     def test_returns_path(self):
@@ -126,12 +128,12 @@ class TestSynthesizeMorseAudioTiming:
         # Longer unit duration should create more samples
         short = synthesize_morse_audio(".-", unit_duration_ms=50)
         long = synthesize_morse_audio(".-", unit_duration_ms=150)
-        
+
         short_size = short.stat().st_size
         long_size = long.stat().st_size
-        
+
         assert long_size > short_size
-        
+
         short.unlink()
         long.unlink()
 

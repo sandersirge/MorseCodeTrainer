@@ -1,16 +1,17 @@
 """Shared fixtures for pytest."""
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Ensure src.main.python package is importable (add project root)
 project_root = Path(__file__).parent.parent.parent  # MorseCodeProgram/
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from src.main.python.model.flashcard_session import Flashcard, FlashcardSession
-from src.main.python.model.translation_session import TranslationSession
-from src.main.python.model.test_session import TestSession
+from src.main.python.model.flashcard_session import Flashcard, FlashcardSession  # noqa: E402
+from src.main.python.model.test_session import TestSession  # noqa: E402
+from src.main.python.model.translation_session import TranslationSession  # noqa: E402
 
 
 @pytest.fixture

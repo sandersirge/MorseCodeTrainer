@@ -1,8 +1,11 @@
 """Tests for FlashcardPresenter controller."""
-import pytest
 from unittest.mock import Mock
+
+import pytest
+
 from src.main.python.controllers.flashcard_controller import FlashcardPresenter, FlashcardState
-from src.main.python.model.flashcard_session import FlashcardSession, Flashcard
+from src.main.python.exceptions import SessionNotInitializedError
+from src.main.python.model.flashcard_session import Flashcard, FlashcardSession
 
 
 @pytest.fixture
@@ -14,14 +17,14 @@ def mock_sessions():
     letters.progress_percentage.return_value = 0.0
     letters.is_first.return_value = True
     letters.is_last.return_value = False
-    
+
     numbers = Mock(spec=FlashcardSession)
     numbers.is_empty.return_value = False
     numbers.current.return_value = Flashcard(front="1", back=".----")
     numbers.progress_percentage.return_value = 0.0
     numbers.is_first.return_value = True
     numbers.is_last.return_value = False
-    
+
     return {"letters": letters, "numbers": numbers}
 
 
@@ -95,7 +98,7 @@ class TestFlashcardPresenterToggle:
         assert state.display_text == ".-"
 
     def test_toggle_without_category_raises(self, presenter):
-        with pytest.raises(RuntimeError, match="not initialised"):
+        with pytest.raises(SessionNotInitializedError):
             presenter.toggle()
 
 
@@ -107,7 +110,7 @@ class TestFlashcardPresenterNavigation:
         mock_sessions["letters"].is_last.return_value = False
         mock_sessions["letters"].move_next.return_value = True
         mock_sessions["letters"].current.return_value = Flashcard(front="B", back="-...")
-        
+
         state = presenter.next()
         mock_sessions["letters"].move_next.assert_called_once()
         assert state is not None
@@ -157,7 +160,7 @@ class TestFlashcardPresenterCurrentState:
         assert isinstance(state, FlashcardState)
 
     def test_current_state_without_category_raises(self, presenter):
-        with pytest.raises(RuntimeError, match="not initialised"):
+        with pytest.raises(SessionNotInitializedError):
             presenter.current_state()
 
 

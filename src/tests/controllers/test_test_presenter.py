@@ -1,8 +1,11 @@
 """Tests for TestPresenter controller."""
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, PropertyMock
+
 from src.main.python.controllers.test_controller import TestPresenter, TestQuestionState
-from src.main.python.model.test_session import TestSession, TestSummary, TestResponse
+from src.main.python.exceptions import SessionInvalidStateError, SessionNotInitializedError
+from src.main.python.model.test_session import TestResponse, TestSession, TestSummary
 
 
 @pytest.fixture
@@ -72,7 +75,7 @@ class TestTestPresenterCurrentState:
 
     def test_current_state_without_prompt_raises(self, presenter, mock_session):
         mock_session.current_prompt.return_value = None
-        with pytest.raises(RuntimeError, match="No active prompt"):
+        with pytest.raises(SessionNotInitializedError):
             presenter.current_state()
 
 
@@ -90,7 +93,7 @@ class TestTestPresenterRecordAnswer:
 
     def test_record_answer_without_prompt_raises(self, presenter, mock_session):
         mock_session.current_prompt.return_value = None
-        with pytest.raises(RuntimeError, match="without an active prompt"):
+        with pytest.raises(SessionInvalidStateError):
             presenter.record_answer("answer", 1.0)
 
 
@@ -105,7 +108,7 @@ class TestTestPresenterNavigation:
 
     def test_move_previous_calls_session(self, presenter, mock_session):
         mock_session.previous_question.return_value = "HELLO"
-        state = presenter.move_previous()
+        presenter.move_previous()
         mock_session.previous_question.assert_called_once()
 
     def test_can_move_next_delegates(self, presenter, mock_session):

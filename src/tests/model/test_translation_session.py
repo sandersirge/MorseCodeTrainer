@@ -1,5 +1,7 @@
 """Tests for TranslationSession model."""
 import pytest
+
+from src.main.python.exceptions import MismatchedDataError, SessionInvalidStateError
 from src.main.python.model.translation_session import TranslationSession
 
 
@@ -14,7 +16,7 @@ class TestTranslationSessionInit:
         assert session.total == 2
 
     def test_init_mismatched_lengths_raises(self):
-        with pytest.raises(ValueError, match="equal numbers"):
+        with pytest.raises(MismatchedDataError):
             TranslationSession(prompts=["HELLO"], answers=["a", "b"])
 
     def test_init_empty_lists(self):
@@ -22,11 +24,11 @@ class TestTranslationSessionInit:
         assert session.total == 0
 
     def test_init_invalid_index_raises(self):
-        with pytest.raises(ValueError, match="index must point"):
+        with pytest.raises(SessionInvalidStateError):
             TranslationSession(prompts=["A"], answers=[".-"], index=5)
 
     def test_init_negative_index_raises(self):
-        with pytest.raises(ValueError, match="index must point"):
+        with pytest.raises(SessionInvalidStateError):
             TranslationSession(prompts=["A"], answers=[".-"], index=-1)
 
 

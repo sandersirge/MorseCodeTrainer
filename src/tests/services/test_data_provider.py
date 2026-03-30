@@ -1,20 +1,20 @@
 """Tests for data_provider service."""
-import pytest
 from types import MappingProxyType
+
+from src.main.python.model.flashcard_session import FlashcardSession
+from src.main.python.model.test_session import TestSession
+from src.main.python.model.translation_session import TranslationSession
 from src.main.python.services.data_provider import (
-    create_translation_resources,
-    create_test_session,
+    FlashcardResources,
+    TranslationResources,
     create_flashcard_resources,
+    create_test_session,
+    create_translation_resources,
+    load_flashcard_audio_map,
     load_letter_cards,
     load_number_cards,
     load_symbol_cards,
-    load_flashcard_audio_map,
-    TranslationResources,
-    FlashcardResources,
 )
-from src.main.python.model.translation_session import TranslationSession
-from src.main.python.model.test_session import TestSession
-from src.main.python.model.flashcard_session import FlashcardSession
 
 
 class TestCreateTranslationResources:

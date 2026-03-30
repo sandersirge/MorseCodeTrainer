@@ -1,5 +1,4 @@
 """Tests for constants module integrity."""
-import pytest
 from src.main.python.resources import constants as consts
 
 

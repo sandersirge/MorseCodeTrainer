@@ -1,6 +1,7 @@
 """Shared fixtures for services tests."""
-import pytest
 import sys
+
+import pytest
 
 
 @pytest.fixture
@@ -11,6 +12,6 @@ def mock_pygame(monkeypatch):
     mock_module.mixer.init = lambda: None
     mock_module.mixer.Sound = lambda x: type("Sound", (), {"play": lambda self: None, "stop": lambda self: None})()
     mock_module.error = Exception
-    
+
     monkeypatch.setitem(sys.modules, "pygame", mock_module)
     return mock_module

@@ -1,7 +1,13 @@
 """Tests for TranslationPresenter controller."""
-import pytest
 from unittest.mock import Mock
-from src.main.python.controllers.translation_controller import TranslationPresenter, TranslationState
+
+import pytest
+
+from src.main.python.controllers.translation_controller import (
+    TranslationPresenter,
+    TranslationState,
+)
+from src.main.python.exceptions import SessionNotInitializedError
 from src.main.python.model.translation_session import TranslationSession
 
 
@@ -97,7 +103,7 @@ class TestTranslationPresenterNavigation:
         presenter.start("morse_to_text")
         mock_morse_session.is_last.return_value = False
         mock_morse_session.move_next.return_value = True
-        
+
         state = presenter.next()
         mock_morse_session.move_next.assert_called_once()
         assert state is not None
@@ -115,7 +121,7 @@ class TestTranslationPresenterNavigation:
         assert isinstance(state, TranslationState)
 
     def test_navigation_without_start_raises(self, presenter):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(SessionNotInitializedError):
             presenter.next()
 
 
@@ -128,7 +134,7 @@ class TestTranslationPresenterHint:
         assert hint == "HELLO"
 
     def test_hint_without_start_raises(self, presenter):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(SessionNotInitializedError):
             presenter.hint()
 
 
@@ -173,7 +179,7 @@ class TestTranslationPresenterCheckAnswer:
         assert is_correct is False
 
     def test_check_answer_without_start_raises(self, presenter):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(SessionNotInitializedError):
             presenter.check_answer("test")
 
 
@@ -190,7 +196,7 @@ class TestTranslationPresenterAudioPath:
         assert path is None or isinstance(path, str)
 
     def test_audio_path_without_start_raises(self, presenter):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(SessionNotInitializedError):
             presenter.audio_path()
 
 

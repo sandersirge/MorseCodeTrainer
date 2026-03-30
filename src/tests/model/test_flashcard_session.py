@@ -1,5 +1,6 @@
 """Tests for FlashcardSession model."""
 import pytest
+
 from src.main.python.model.flashcard_session import Flashcard, FlashcardSession
 
 
