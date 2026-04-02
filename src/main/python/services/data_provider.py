@@ -25,7 +25,6 @@ def _frozen_mapping(data: Mapping[str, _T]) -> Mapping[str, _T]:
 class TranslationResources:
 	morse_to_text: TranslationSession
 	text_to_morse: TranslationSession
-	audio_map: Mapping[str, str]
 
 
 @dataclass(frozen=True)
@@ -51,11 +50,9 @@ def create_translation_resources() -> TranslationResources:
 		prompts=list(consts.TRANSLATION_TEXT_SAMPLES),
 		answers=list(consts.TRANSLATION_MORSE_SAMPLES),
 	)
-	audio_map = _frozen_mapping(consts.PHRASE_AUDIO_MAP)
 	return TranslationResources(
 		morse_to_text=morse_session,
 		text_to_morse=text_session,
-		audio_map=audio_map,
 	)
 
 

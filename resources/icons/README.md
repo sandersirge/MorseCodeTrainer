@@ -1,6 +1,6 @@
 # Application Icons
 
-Briefcase requires icons in multiple formats and sizes. Place your icons here with the base name `morsetrainer`.
+PyInstaller and the OS require icons in multiple formats and sizes. Place your icons here with the base name `morsetrainer`.
 
 ## Required Files
 
@@ -31,7 +31,7 @@ You can use tools like:
 
 ## Placeholder
 
-Until you have proper icons, Briefcase will use a default icon.
+Until you have proper icons, PyInstaller will use a default icon.
 If builds fail due to missing icons, create placeholder PNG files:
 
 ```bash

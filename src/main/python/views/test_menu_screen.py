@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 import customtkinter as ctk
 
-from ..controllers.test_controller import TestPresenter
+from ..controllers.protocols import TestPresenterProtocol
 from .test_shared import prepare_backdrop
 from .theme import get_colors
 from .widgets import make_button, make_card, make_font, make_frame, make_label
@@ -17,7 +17,7 @@ class TestMenuScreen:
 		self,
 		root: ctk.CTk,
 		clear_screen: Callable[[], None],
-		presenter: TestPresenter,
+		presenter: TestPresenterProtocol,
 		on_home: Callable[[], None],
 		on_start: Callable[[], None],
 	) -> None:

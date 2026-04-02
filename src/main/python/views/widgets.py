@@ -18,10 +18,6 @@ from .theme import (
 	FONT_SIZE_MD,
 	FONT_SIZE_SM,
 	FONT_SIZE_XL,
-	SURFACE_ACCENT,
-	SURFACE_DARK,
-	TEXT_DARK,
-	TEXT_PRIMARY,
 	get_colors,
 )
 
@@ -38,14 +34,17 @@ class ButtonStyle:
 	text_color: str
 
 
-BUTTON_STYLES: dict[str, ButtonStyle] = {
-	"primary": ButtonStyle("#2563eb", "#1d4ed8", TEXT_PRIMARY),
-	"secondary": ButtonStyle("#0ea5e9", "#0284c7", TEXT_DARK),
-	"muted": ButtonStyle("#1e293b", "#141f33", "#e2e8f0"),
-	"danger": ButtonStyle("#dc2626", "#b91c1c", TEXT_PRIMARY),
-	"positive": ButtonStyle("#22c55e", "#16a34a", "#052e16"),
-	"ghost": ButtonStyle("transparent", "#1e293b", TEXT_PRIMARY),
-}
+def get_button_style(variant: str = "primary") -> ButtonStyle:
+	"""Return a theme-aware ButtonStyle for the given variant."""
+	colors = get_colors()
+	styles: dict[str, ButtonStyle] = {
+		"primary": ButtonStyle("#2563eb", "#1d4ed8", colors.text_primary),
+		"secondary": ButtonStyle("#0ea5e9", "#0284c7", colors.text_dark),
+		"muted": ButtonStyle(colors.entry_bg, colors.entry_border, colors.text_primary),
+		"danger": ButtonStyle("#dc2626", "#b91c1c", colors.text_primary),
+		"positive": ButtonStyle("#22c55e", "#16a34a", "#052e16"),
+	}
+	return styles.get(variant, styles["primary"])
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +251,7 @@ def make_button(
 ) -> ctk.CTkButton:
 	"""Create a CTkButton with palette-driven variants (primary, danger, etc.)."""
 
-	style = BUTTON_STYLES.get(variant, BUTTON_STYLES["primary"])
+	style = get_button_style(variant)
 	return ctk.CTkButton(
 		parent,
 		text=text,
@@ -320,11 +319,17 @@ def make_card(
 	*,
 	corner_radius: int = 28,
 	border_width: int = 1,
-	fg_color: str = SURFACE_DARK,
-	border_color: str = SURFACE_ACCENT,
+	fg_color: str | None = None,
+	border_color: str | None = None,
 	**options,
 ) -> ctk.CTkFrame:
 	"""Create a elevated card-style frame used across the modern screens."""
+	if fg_color is None or border_color is None:
+		colors = get_colors()
+		if fg_color is None:
+			fg_color = colors.card_bg
+		if border_color is None:
+			border_color = colors.card_border
 
 	return make_frame(
 		parent,
@@ -343,10 +348,12 @@ def make_progress_bar(
 	width: int | None = None,
 	height: int = 12,
 	fg_color: str | None = None,
-	progress_color: str = BUTTON_STYLES["primary"].fg_color,
+	progress_color: str | None = None,
 	corner_radius: int | None = None,
 ) -> ctk.CTkProgressBar:
 	"""Create a CTkProgressBar with shared animation helpers bound to the widget."""
+	if progress_color is None:
+		progress_color = get_button_style("primary").fg_color
 
 	bar = ctk.CTkProgressBar(
 		parent,
@@ -428,8 +435,8 @@ __all__ = [
 	"make_frame",
 	"make_card",
 	"make_progress_bar",
-	"BUTTON_STYLES",
 	"ButtonStyle",
+	"get_button_style",
 	# Keyboard navigation
 	"setup_keyboard_navigation",
 	"add_focus_highlight",

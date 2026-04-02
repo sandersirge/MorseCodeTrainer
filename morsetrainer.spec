@@ -20,7 +20,7 @@ else:
     icon_file = None
 
 # Collect data files (resources) — skip directories that are empty or missing
-_resource_dirs = ['letters', 'numbers', 'symbols', 'testing', 'translation']
+_resource_dirs = ['letters', 'numbers', 'symbols']
 datas = []
 for _name in _resource_dirs:
     _dir = RESOURCES_PATH / _name

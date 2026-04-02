@@ -5,7 +5,8 @@ from collections.abc import Callable
 
 import customtkinter as ctk
 
-from ..controllers.test_controller import TestPresenter, TestQuestionState
+from ..controllers.protocols import TestPresenterProtocol
+from ..controllers.test_controller import TestQuestionState
 from ..model.test_session import TestSummary
 from .test_shared import prepare_backdrop
 from .theme import get_colors, register_theme_callback
@@ -27,7 +28,7 @@ class TestRunnerScreen:
 		self,
 		root: ctk.CTk,
 		clear_screen: Callable[[], None],
-		presenter: TestPresenter,
+		presenter: TestPresenterProtocol,
 		pygame_module,
 		*,
 		on_review: Callable[[TestSummary], None],

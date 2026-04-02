@@ -127,30 +127,6 @@ def get_colors() -> ThemeColors:
 
 
 # ---------------------------------------------------------------------------
-# Backwards-compatible module-level constants (use get_colors() for dynamic theming)
-# These are kept for existing code but will reflect the initial dark theme
-# ---------------------------------------------------------------------------
-
-# Background Colors
-BACKDROP_BG = "#0b1120"
-CARD_BG = "#111c2f"
-CARD_BORDER = "#1f2a44"
-SECTION_BG = "#0f172a"
-
-# Aliases for semantic usage
-SURFACE_DARK = CARD_BG
-SURFACE_LIGHT = BACKDROP_BG
-SURFACE_ACCENT = CARD_BORDER
-
-# Text Colors
-TEXT_PRIMARY = "#f8fafc"
-TEXT_MUTED = "#cbd5f5"
-TEXT_PLACEHOLDER = "#94a3b8"
-TEXT_DARK = "#0f172a"
-SUCCESS_TEXT = "#22c55e"
-ERROR_TEXT = "#f87171"
-
-# ---------------------------------------------------------------------------
 # Font Families
 # ---------------------------------------------------------------------------
 FONT_FAMILY_DEFAULT = "Segoe UI"

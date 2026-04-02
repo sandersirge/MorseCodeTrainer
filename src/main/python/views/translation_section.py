@@ -8,7 +8,7 @@ from tkinter import TclError
 import customtkinter as ctk
 
 from ..controllers.translation_sandbox_controller import SandboxState
-from .theme import ERROR_TEXT, get_colors
+from .theme import get_colors
 from .widgets import (
 	font_button_large,
 	font_callout,
@@ -22,7 +22,6 @@ from .widgets import (
 
 # Accent colours used only within this component
 _BUTTON_SEGMENT_HOVER = "#1d4ed8"
-_TEXT_ERROR = ERROR_TEXT
 
 
 class TranslationSection:
@@ -185,7 +184,7 @@ class TranslationSection:
 			self.container,
 			"",
 			font=self._hint_font,
-			text_color=_TEXT_ERROR,
+			text_color=get_colors().error_text,
 			justify="left",
 		)
 		self.error_label.grid(row=5, column=0, padx=32, pady=(4, 24), sticky="w")

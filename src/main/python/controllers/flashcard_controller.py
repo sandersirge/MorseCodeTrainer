@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from ..exceptions import SessionNotInitializedError
 from ..model.flashcard_session import FlashcardSession
+from ..services.audio_cache import AudioCache
 
 
 @dataclass(frozen=True)
@@ -32,10 +33,10 @@ class FlashcardPresenter:
 	def __init__(
 		self,
 		sessions: Mapping[str, FlashcardSession],
-		audio_map: Mapping[str, str],
+		audio_cache: AudioCache,
 	) -> None:
 		self._sessions = {name: session for name, session in sessions.items()}
-		self._audio_map = dict(audio_map)
+		self._audio_cache = audio_cache
 		self._active_category: str | None = None
 		self._showing_back = False
 
@@ -80,7 +81,7 @@ class FlashcardPresenter:
 	def _build_state(self, session: FlashcardSession) -> FlashcardState:
 		card = session.current()
 		display_text = card.back if self._showing_back else card.front
-		audio_path = self._audio_map.get(card.front)
+		audio_path = self._audio_cache.resolve_with_fallback(card.back, card.front)
 		progress_value = session.progress_percentage()
 		is_first = session.is_first()
 		is_last = session.is_last()

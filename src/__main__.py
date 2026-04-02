@@ -1,7 +1,7 @@
-"""Entry point for Briefcase/BeeWare packaging.
+"""Fallback entry point for IDE execution.
 
 Allows running as `python -m src` when the project root is on sys.path.
-This entry point is designed for future BeeWare/Toga migration.
+The primary entry point is `run.py` (used by PyInstaller).
 """
 import sys
 from pathlib import Path

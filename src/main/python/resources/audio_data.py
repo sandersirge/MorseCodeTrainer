@@ -38,13 +38,6 @@ SYMBOL_AUDIO_MAP = {
 	symbol: f"resources/symbols/{slug}.wav" for symbol, slug in _SYMBOL_AUDIO_LABELS
 }
 
-WORD_AUDIO_ENTRIES = tuple(f"sõna{i}" for i in range(1, 11))
-SENTENCE_AUDIO_ENTRIES = tuple(f"lause{i}" for i in range(1, 11))
-
-PHRASE_AUDIO_MAP = {
-	entry: f"resources/{entry}.wav" for entry in (*WORD_AUDIO_ENTRIES, *SENTENCE_AUDIO_ENTRIES)
-}
-
 LETTER_AUDIO_KEYS = LETTER_AUDIO_MAP.keys()
 NUMBER_AUDIO_KEYS = NUMBER_AUDIO_MAP.keys()
 SYMBOL_AUDIO_KEYS = SYMBOL_AUDIO_MAP.keys()
@@ -53,7 +46,6 @@ __all__ = [
 	"LETTER_AUDIO_MAP",
 	"NUMBER_AUDIO_MAP",
 	"SYMBOL_AUDIO_MAP",
-	"PHRASE_AUDIO_MAP",
 	"LETTER_AUDIO_KEYS",
 	"NUMBER_AUDIO_KEYS",
 	"SYMBOL_AUDIO_KEYS",

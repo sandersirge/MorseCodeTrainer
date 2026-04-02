@@ -44,14 +44,12 @@ class TestResourceImports:
 		from src.main.python.resources.audio_data import (
 			LETTER_AUDIO_MAP,
 			NUMBER_AUDIO_MAP,
-			PHRASE_AUDIO_MAP,
 			SYMBOL_AUDIO_MAP,
 		)
 
 		assert len(LETTER_AUDIO_MAP) > 0
 		assert len(NUMBER_AUDIO_MAP) > 0
 		assert len(SYMBOL_AUDIO_MAP) > 0
-		assert len(PHRASE_AUDIO_MAP) > 0
 
 	def test_exercise_samples_equal_length(self) -> None:
 		from src.main.python.resources.exercise_data import (

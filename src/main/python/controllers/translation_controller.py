@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 
 from ..exceptions import SessionNotInitializedError
 from ..model.translation_session import TranslationSession
+from ..services.audio_cache import AudioCache
 
 
 @dataclass(frozen=True)
@@ -40,13 +40,13 @@ class TranslationPresenter:
 		self,
 		morse_session: TranslationSession,
 		text_session: TranslationSession,
-		audio_map: Mapping[str, str],
+		audio_cache: AudioCache | None = None,
 	) -> None:
 		self._sessions = {
 			"morse_to_text": morse_session,
 			"text_to_morse": text_session,
 		}
-		self._audio_map = dict(audio_map)
+		self._audio_cache = audio_cache
 		self._active_mode: str | None = None
 
 	def reset(self) -> None:
@@ -115,9 +115,11 @@ class TranslationPresenter:
 	def audio_path(self) -> str | None:
 		"""Fetch the audio file path associated with the active prompt."""
 
+		if self._active_mode != "morse_to_text" or self._audio_cache is None:
+			return None
 		session = self._require_session()
 		prompt = session.current_prompt()
-		return self._audio_map.get(prompt)
+		return self._audio_cache.resolve(prompt, prompt)
 
 	def title_for_mode(self, mode: str) -> str:
 		return self._TITLES[mode]
@@ -133,7 +135,10 @@ class TranslationPresenter:
 			progress_value = 100.0 if index else 0.0
 
 		prompt = session.current_prompt()
-		audio_path = self._audio_map.get(prompt)
+		if mode == "morse_to_text" and self._audio_cache is not None:
+			audio_path = self._audio_cache.resolve(prompt, prompt)
+		else:
+			audio_path = None
 		is_first = session.is_first()
 		is_last = session.is_last()
 		prompt_style = "large" if mode == "text_to_morse" else "medium"

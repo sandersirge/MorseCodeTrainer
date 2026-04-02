@@ -6,7 +6,7 @@
 - Translation sandbox now provides segmented direction control, placeholders, and refreshed audio widgets
 - Timed test workflow supports backward navigation, persistent answers, and pause exits through controller-model coordination
 - Controllers hold all domain logic, models expose immutable state, and views stay presentation-only
-- **Pytest coverage complete**: 638 tests across models, controllers, services, utils, resources, and exceptions with HTML reporting
+- **Pytest coverage complete**: 705 tests across models, controllers, services, utils, resources, exceptions, application wiring, views/theme, and regressions
 - **Project restructured**: `src/main/python/` for application code, `src/tests/` for test suite, `src/main/resources/` for assets
 - **CI/CD configured**: GitHub Actions workflow runs tests on Python 3.10-3.12 across Ubuntu, Windows, macOS
 - **Docker support added**: Dockerfile and docker-compose.yml for containerized testing and development
@@ -15,7 +15,9 @@
 - **Accessibility improvements**: Light/dark mode toggle, keyboard navigation helpers, focus indicators, and entry field placeholders
 - **Error handling standardised**: Typed exception hierarchy with Estonian user messages; `get_user_message()` helper for views
 - **Dynamic theming**: All views now use `get_colors()` for theme-aware rendering; light/dark mode applies across entire app
+- **Dynamic audio**: `AudioCache` service synthesizes morse audio on demand with static-file fallback for learning; translation exercises (morse→text) use dynamic-only audio
 - **Ruff linting enforced**: Blocking ruff check and format in CI; tab-indented code style with UP/I/F/E/W rules
+- **Briefcase config removed**: Deprecated BeeWare/Toga sections cleaned from `pyproject.toml`
 
 ## Completed
 
@@ -45,47 +47,42 @@
 - [x] Add Hypothesis property-based tests for encode→decode round-trip in `test_morse_translator_property.py`
 - [x] Add smoke test suite (`tests/test_smoke.py`, `pytest.mark.smoke`) — 16 tests, completes in < 0.5 s
 
+### 10. ~~Introduce `AudioCache` dynamic audio service~~ ✅ DONE
+
+Created `services/audio_cache.py` with `AudioCache` class wrapping `synthesize_morse_audio()`. The cache stores generated temp `.wav` files keyed by prompt. `resolve()` provides dynamic-only synthesis; `resolve_with_fallback()` tries dynamic first, then falls back to the static `.wav` file map. `cleanup()` deletes all cached temp files (registered via `atexit`). Removed dead `PHRASE_AUDIO_MAP`, `WORD_AUDIO_ENTRIES`, and `SENTENCE_AUDIO_ENTRIES` from `audio_data.py`. Deleted empty `exercises/` and `quiz/` resource directories. `FlashcardPresenter` uses `resolve_with_fallback(card.back, card.front)` for learning mode. `TranslationPresenter` uses `resolve(prompt, prompt)` for morse→text exercises only.
+
 ## Known Limitations
 
-- Morse code audio playback not yet supported in Training and Testing modes (Sandbox only)
+- Timed test mode has no audio (by design — tests measure text recall)
+- Text→morse translation exercises have no audio (prompt is plain text, not morse)
 
 ## Near-Term Priorities
 
-- Add audio playback support to Training and Testing modes
+- Expose speed/pitch/volume controls for dynamic audio in learning and exercises UI
 
 ## Architecture & Modularity Improvements
 
 Issues identified across the current codebase. Ordered roughly by impact vs effort.
 
-### 1. Retire static theme constants from `theme.py`
+### 1. ~~Retire static theme constants from `theme.py`~~ ✅ DONE
 
-`theme.py` exports a backwards-compatible block of module-level constants (`TEXT_PRIMARY`, `BACKDROP_BG`, `CARD_BG`, etc.) that are always dark-mode values. These are the root cause of recurring light-mode colour bugs — any file that imports them statically gets the wrong colour in light mode. `widgets.py` still uses several of them in `BUTTON_STYLES`.
+Removed the backwards-compatible block of module-level colour constants (`TEXT_PRIMARY`, `BACKDROP_BG`, `CARD_BG`, `SURFACE_DARK`, `SURFACE_ACCENT`, `ERROR_TEXT`, etc.) from `theme.py`. Replaced all import sites in `widgets.py` and `translation_section.py` with `get_colors()` calls. `make_card()` defaults now resolve via `get_colors()` at call time instead of frozen dark-mode values.
 
-**Fix:** remove the static constant block entirely; replace every remaining import site with `get_colors()` calls. The `# Backwards-compatible module-level constants` section in `theme.py` and the corresponding imports in `widgets.py` (`SURFACE_ACCENT`, `SURFACE_DARK`, `TEXT_PRIMARY`, `TEXT_DARK`) should all be eliminated.
+### 2. ~~Make `BUTTON_STYLES` theme-aware~~ ✅ DONE
 
-### 2. Make `BUTTON_STYLES` theme-aware
+Converted the static `BUTTON_STYLES` dict into a `get_button_style(variant)` function that calls `get_colors()` internally. The `muted` variant now uses `colors.entry_bg` / `colors.entry_border` for correct light-mode rendering. Removed the unused `ghost` variant. `make_button()` and `make_progress_bar()` call the new function instead of the dict.
 
-`widgets.py` defines `BUTTON_STYLES` as a module-level `dict[str, ButtonStyle]` with hardcoded hex strings. The `muted` and `ghost` variants use dark-mode hover colours (`"#141f33"`, `"#1e293b"`) that are invisible in light mode. `make_button` reads this dict once at call time, so theme changes are never reflected.
+### 3. ~~Introduce a `Navigator` abstraction to replace manual routing in `Application`~~ ✅ DONE
 
-**Fix:** Convert to a function `get_button_style(variant: str) -> ButtonStyle` that calls `get_colors()` internally for the variants whose colours depend on the theme (muted, ghost, secondary). Purely accent-based variants (primary, danger, positive) can remain static.
+Created a frozen `Navigator` dataclass (`navigator.py`) with named `Callable` fields (`home`, `introduction`, `flashcards`, `translation`, `translation_sandbox`, `test`, `exit`, `clear_screen`, `reset_translation`). `build_application()` constructs a single `Navigator` instance and passes it to every view via `_build_views(nav, deps)`. All six view classes (`HomeView`, `IntroductionView`, `FlashcardView`, `TranslationView`, `TranslationSandboxView`, `TestView`) now accept `nav: Navigator` instead of individual `Callable` arguments. Adding a new screen only requires a new field on `Navigator` — no view signatures need to change.
 
-### 3. Introduce a `Navigator` abstraction to replace manual routing in `Application`
+### 4. ~~Replace `clear_screen()` with a view-stack / frame-swap pattern~~ ✅ DONE
 
-`Application` currently acts as a manual router with individual navigation methods (`avalehekülg`, `tutvustus`, `režiim1`, `režiim2`, etc.). Each method redundantly resets all state. Every new screen requires modifying `Application` directly. Views receive navigation callbacks as positional `Callable` arguments, making intent opaque.
+Created `ViewStack` (`view_stack.py`) that registers a persistent `CTkFrame` per view as children of the real root window. Navigation uses `.pack_forget()` / `.pack()` to swap the visible frame — no widgets are destroyed on screen transitions. Each view receives its own frame as `root` and clears only its own children via `_clear_content()` for internal rebuilds. Removed `clear_screen` from `Navigator`. Application routing methods call `view_stack.show(name)` before invoking the target view's entry method.
 
-**Fix:** Extract a `Navigator` Protocol (or simple dataclass of named callables) and pass one `Navigator` instance to each view instead of a growing list of individual callbacks. `Application.attach_views()` becomes a one-liner that wires a `Navigator` to each view. Adding a screen no longer requires touching `Application`.
+### 5. ~~Define presenter `Protocol` types so views depend on abstractions~~ ✅ DONE
 
-### 4. Replace `clear_screen()` with a view-stack / frame-swap pattern
-
-`clear_screen()` destroys every child widget of the root window on every navigation. This is the root cause of `TclError` timing issues we have patched with `after_idle` workarounds, and it forces full widget rebuilds on every navigation, discarding all widget state.
-
-**Fix:** Keep each view's top-level `CTkFrame` alive and use `.pack_forget()` / `.pack()` (or grid show/hide) to switch between screens. Views that need fresh state on entry can reset their own internal state in a `on_enter()` hook rather than rebuilding from scratch. This eliminates the TclError class entirely.
-
-### 5. Define presenter `Protocol` types so views depend on abstractions
-
-Views currently receive concrete presenter instances (`FlashcardPresenter`, `TranslationPresenter`, etc.), coupling the view layer directly to controller implementations. This makes substituting test doubles in integration tests awkward and prevents alternative presenter implementations.
-
-**Fix:** Add `FlashcardPresenterProtocol`, `TranslationPresenterProtocol`, `TestPresenterProtocol`, `SandboxPresenterProtocol` as `typing.Protocol` classes in a `controllers/protocols.py` module. Views annotate their `presenter` arguments with these protocol types. Concrete controller classes implicitly satisfy them — no inheritance required.
+Added `controllers/protocols.py` with `FlashcardPresenterProtocol`, `TranslationPresenterProtocol`, `TestPresenterProtocol`, and `SandboxPresenterProtocol` as `typing.Protocol` classes. All six view files now annotate their `presenter` parameters with these protocol types instead of concrete controller classes. Concrete presenters implicitly satisfy the protocols — no inheritance required.
 
 ### 6. ~~Split `translation_sandbox_sections.py` into two modules~~ ✅ DONE
 
@@ -138,17 +135,13 @@ The test suite has 337 unit tests covering: model layer (3 files), controller la
 
 Added 102 tests in `src/tests/exceptions/` mirroring the package structure (`test_base.py`, `test_session.py`, `test_translation.py`, `test_audio.py`, `test_validation.py`).
 
-### 2. Add `tests/application/` integration test suite
+### 2. ~~Add `tests/application/` integration test suite~~ ✅ DONE
 
-`application.py` wires every presenter and view together through `build_application()` and `_build_views()`. No test currently exercises this path, meaning the app's DI wiring is only validated at runtime.
+Added `src/tests/application/test_wiring.py` with 10 tests covering `Application` construction, presenter assignment, `attach_views()`, `clear_screen()`, navigation methods (`avalehekülg`, `tutvustus`), and reset helpers. Uses mock `root` and real presenters wired to real sessions.
 
-**Add:** `src/tests/application/test_wiring.py` — smoke tests that call `build_application()` with a mocked `root_factory` (returns a `Mock()` instead of `ctk.CTk`), assert all presenters are non-`None`, assert `attach_views()` sets all view references on the `Application` instance.
+### 3. ~~Add `tests/views/` for theme and widget helpers~~ ✅ DONE
 
-### 3. Add `tests/views/` for theme and widget helpers
-
-`views/theme.py` and `views/widgets.py` contain testable pure logic (colour resolution, font construction, callback registration) that doesn't need a real Tk window.
-
-**Add:** `src/tests/views/test_theme.py` — tests for `get_colors()` returning correct palette per mode, `set_appearance_mode()` normalising unknown values to `"dark"`, and `register_theme_callback()` / `unregister_theme_callback()` round-trip. `src/tests/views/test_widgets.py` — tests for `BUTTON_STYLES` key coverage, `make_font()` returning a `CTkFont`, `add_focus_highlight()` not raising on a widget with no border.
+Added `src/tests/views/test_theme.py` (25 tests) covering `get_colors()` palette selection, `set_appearance_mode()` normalisation, `toggle_appearance_mode()` round-trip, callback registration/unregistration/deduplication, and error resilience. Added `src/tests/views/test_widgets.py` (19 tests) covering `get_button_style()` theme-awareness across all variants, fallback for unknown variants, `ButtonStyle` frozen dataclass behaviour, and theme-dependent colour switching for muted/primary/secondary styles.
 
 ### 4. ~~Introduce parametrized tests for the translator and model boundaries~~ ✅ DONE
 
@@ -201,9 +194,9 @@ markers = ["smoke: fast bootstrap sanity checks"]
 
 CI step: `pytest -m smoke` before the full `pytest` run.
 
-### 7. Add regression tests for fixed bugs
+### 7. ~~Add regression tests for fixed bugs~~ ✅ DONE
 
-Known bugs that have been fixed (TclError on theme toggle, `make_label` static colour in light mode) should have regression tests so they cannot silently reappear. These live in their closest unit test module with a `# regression:` comment and a reference to the original issue.
+Added `src/tests/views/test_regressions.py` (8 tests) covering: static theme constants removed, muted button visibility in light mode, error text theme awareness, no static colour exports from theme.py, font constants still exported, and ghost variant graceful fallback.
 
 ---
 

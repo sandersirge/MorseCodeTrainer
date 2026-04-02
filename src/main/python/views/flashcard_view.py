@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from tkinter import TclError, Tk, messagebox
 
 import customtkinter as ctk
 
-from ..controllers.flashcard_controller import FlashcardPresenter, FlashcardState
+from ..controllers.flashcard_controller import FlashcardState
+from ..controllers.protocols import FlashcardPresenterProtocol
+from ..navigator import Navigator
 from .theme import get_colors, register_theme_callback
 from .widgets import make_button, make_card, make_font, make_frame, make_label, make_progress_bar
 
@@ -16,14 +17,12 @@ class FlashcardView:
 	def __init__(
 		self,
 		root: Tk,
-		clear_screen: Callable[[], None],
-		on_home: Callable[[], None],
+		nav: Navigator,
 		pygame_module,
-		presenter: FlashcardPresenter,
+		presenter: FlashcardPresenterProtocol,
 	) -> None:
 		self.root = root
-		self.clear_screen = clear_screen
-		self.on_home = on_home
+		self.nav = nav
 		self.pygame = pygame_module
 		self.presenter = presenter
 		self.state: FlashcardState | None = None
@@ -71,13 +70,18 @@ class FlashcardView:
 		self._peak_progress_value = 0.0
 		self.pygame.mixer.music.stop()
 
+	def _clear_content(self) -> None:
+		"""Destroy this view's children without touching other views."""
+		for w in self.root.winfo_children():
+			w.destroy()
+
 	# Menu -----------------------------------------------------------------
 
 	def show_menu(self) -> None:
 		"""Display the flashcard learning menu."""
 
 		self.reset_state()
-		self.clear_screen()
+		self._clear_content()
 		colors = get_colors()
 		self._set_root_background(colors.backdrop_bg)
 
@@ -120,7 +124,7 @@ class FlashcardView:
 		make_button(
 			card,
 			text="Tagasi avalehele",
-			command=self.on_home,
+			command=self.nav.home,
 			font=self._button_font,
 			variant="danger",
 			width=220,
@@ -169,7 +173,7 @@ class FlashcardView:
 		self._update_flashcard_content(state, animated=True)
 
 	def _show_missing_data(self, message: str) -> None:
-		self.clear_screen()
+		self._clear_content()
 		colors = get_colors()
 		self._set_root_background(colors.backdrop_bg)
 
@@ -194,7 +198,7 @@ class FlashcardView:
 		).pack()
 
 	def _build_flashcard_ui(self, state: FlashcardState) -> None:
-		self.clear_screen()
+		self._clear_content()
 		colors = get_colors()
 		self._set_root_background(colors.backdrop_bg)
 
@@ -394,7 +398,7 @@ class FlashcardView:
 	def flashcard_finish(self) -> None:
 		self.pygame.mixer.music.stop()
 		self.reset_state()
-		self.clear_screen()
+		self._clear_content()
 		colors = get_colors()
 		self._set_root_background(colors.backdrop_bg)
 

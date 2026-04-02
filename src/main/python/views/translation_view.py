@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from tkinter import TclError
 
 import customtkinter as ctk
 
-from ..controllers.translation_controller import TranslationPresenter, TranslationState
+from ..controllers.protocols import TranslationPresenterProtocol
+from ..controllers.translation_controller import TranslationState
+from ..navigator import Navigator
 from .theme import get_colors, register_theme_callback
 from .widgets import (
 	make_button,
@@ -24,16 +25,12 @@ class TranslationView:
 	def __init__(
 		self,
 		root: ctk.CTk,
-		clear_screen: Callable[[], None],
-		on_home: Callable[[], None],
-		on_reset: Callable[[], None],
+		nav: Navigator,
 		pygame_module,
-		presenter: TranslationPresenter,
+		presenter: TranslationPresenterProtocol,
 	) -> None:
 		self.root = root
-		self.clear_screen = clear_screen
-		self.on_home = on_home
-		self.on_reset = on_reset
+		self.nav = nav
 		self.pygame = pygame_module
 		self.presenter = presenter
 
@@ -100,12 +97,17 @@ class TranslationView:
 		self._failure_count = 0
 		self._peak_progress_value = 0.0
 
+	def _clear_content(self) -> None:
+		"""Destroy this view's children without touching other views."""
+		for w in self.root.winfo_children():
+			w.destroy()
+
 	def show_menu(self) -> None:
 		"""Display the translation direction selector."""
 
 		self.pygame.mixer.music.stop()
 		self.reset_ui()
-		self.clear_screen()
+		self._clear_content()
 		colors = get_colors()
 		self._set_root_background(colors.backdrop_bg)
 
@@ -150,7 +152,7 @@ class TranslationView:
 		make_button(
 			card,
 			text="Tagasi avalehele",
-			command=self.on_home,
+			command=self.nav.home,
 			font=self._button_font,
 			variant="danger",
 			width=220,
@@ -166,7 +168,7 @@ class TranslationView:
 	def _start_mode(self, mode: str) -> None:
 		state = self.presenter.start(mode)
 		if state is None:
-			self.clear_screen()
+			self._clear_content()
 			colors = get_colors()
 			self._set_root_background(colors.backdrop_bg)
 
@@ -225,7 +227,7 @@ class TranslationView:
 		self.entry.focus()  # type: ignore[union-attr]
 
 	def _build_translation_ui(self, state: TranslationState) -> None:
-		self.clear_screen()
+		self._clear_content()
 		colors = get_colors()
 		self._set_root_background(colors.backdrop_bg)
 
@@ -538,8 +540,8 @@ class TranslationView:
 		"""Display the completion message and reset sessions for a fresh run."""
 
 		self.pygame.mixer.music.stop()
-		self.clear_screen()
-		self.on_reset()
+		self._clear_content()
+		self.nav.reset_translation()
 		colors = get_colors()
 		self._set_root_background(colors.backdrop_bg)
 

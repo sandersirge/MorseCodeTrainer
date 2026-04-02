@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from tkinter import TclError
 
 import customtkinter as ctk
 
+from ..navigator import Navigator
 from .theme import (
 	get_appearance_mode,
 	get_colors,
@@ -26,23 +26,10 @@ class HomeView:
 	def __init__(
 		self,
 		root,
-		clear_screen: Callable[[], None],
-		*,
-		on_tutvustus: Callable[[], None],
-		on_flashcards: Callable[[], None],
-		on_translation: Callable[[], None],
-		on_translation_sandbox: Callable[[], None],
-		on_test: Callable[[], None],
-		on_exit: Callable[[], None],
+		nav: Navigator,
 	) -> None:
 		self.root = root
-		self.clear_screen = clear_screen
-		self.on_tutvustus = on_tutvustus
-		self.on_flashcards = on_flashcards
-		self.on_translation = on_translation
-		self.on_translation_sandbox = on_translation_sandbox
-		self.on_test = on_test
-		self.on_exit = on_exit
+		self.nav = nav
 		# Initialize with dark theme - call CTK directly for initial setup only
 		ctk.set_appearance_mode("dark")
 		ctk.set_default_color_theme("blue")
@@ -123,11 +110,11 @@ class HomeView:
 		self._buttons_frame.pack(pady=(0, 24))
 
 		menu_items = [
-			("Tutvustus", self.on_tutvustus),
-			("Õpe", self.on_flashcards),
-			("Harjutused", self.on_translation),
-			("Test", self.on_test),
-			("Sandbox", self.on_translation_sandbox),
+			("Tutvustus", self.nav.introduction),
+			("Õpe", self.nav.flashcards),
+			("Harjutused", self.nav.translation),
+			("Test", self.nav.test),
+			("Sandbox", self.nav.translation_sandbox),
 		]
 
 		for label, callback in menu_items:
@@ -151,7 +138,7 @@ class HomeView:
 		self._exit_btn = make_button(
 			self._footer,
 			text="Välju programmist",
-			command=self.on_exit,
+			command=self.nav.exit,
 			font_size=18,
 			variant="danger",
 			width=220,
@@ -216,8 +203,13 @@ class HomeView:
 		)
 		self._theme_segmented.set("🌙 Tume" if get_appearance_mode() == "dark" else "🌞 Hele")
 
+	def _clear_content(self) -> None:
+		"""Destroy this view's children without touching other views."""
+		for w in self.root.winfo_children():
+			w.destroy()
+
 	def show(self) -> None:
-		self.clear_screen()
+		self._clear_content()
 		self._built = False
 		self._nav_buttons = []
 
@@ -236,16 +228,18 @@ class IntroductionView:
 	def __init__(
 		self,
 		root,
-		clear_screen: Callable[[], None],
-		*,
-		on_back: Callable[[], None],
+		nav: Navigator,
 	) -> None:
 		self.root = root
-		self.clear_screen = clear_screen
-		self.on_back = on_back
+		self.nav = nav
+
+	def _clear_content(self) -> None:
+		"""Destroy this view's children without touching other views."""
+		for w in self.root.winfo_children():
+			w.destroy()
 
 	def show(self) -> None:
-		self.clear_screen()
+		self._clear_content()
 		colors = get_colors()
 
 		try:
@@ -314,7 +308,7 @@ class IntroductionView:
 		back_btn = make_button(
 			button_row,
 			text="Tagasi avalehele",
-			command=self.on_back,
+			command=self.nav.home,
 			font_size=18,
 			variant="danger",
 			width=220,

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
 import customtkinter as ctk
 
-from ..controllers.test_controller import TestPresenter
+from ..controllers.protocols import TestPresenterProtocol
 from ..model.test_session import TestSummary
+from ..navigator import Navigator
 from .test_menu_screen import TestMenuScreen
 from .test_review_screen import TestReviewScreen
 from .test_runner_screen import TestRunnerScreen
@@ -17,19 +16,17 @@ class TestView:
 	def __init__(
 		self,
 		root: ctk.CTk,
-		clear_screen: Callable[[], None],
-		on_home: Callable[[], None],
+		nav: Navigator,
 		pygame_module,
-		presenter: TestPresenter,
+		presenter: TestPresenterProtocol,
 	) -> None:
 		self.root = root
-		self.clear_screen = clear_screen
-		self.on_home = on_home
+		self.nav = nav
 		self.pygame = pygame_module
 
 		self.runner_screen = TestRunnerScreen(
 			root,
-			clear_screen,
+			self._clear_content,
 			presenter,
 			pygame_module,
 			on_review=self._show_review,
@@ -37,16 +34,21 @@ class TestView:
 		)
 		self.review_screen = TestReviewScreen(
 			root,
-			clear_screen,
+			self._clear_content,
 			on_back_to_results=self._return_to_results,
 		)
 		self.menu_screen = TestMenuScreen(
 			root,
-			clear_screen,
+			self._clear_content,
 			presenter,
-			on_home,
+			nav.home,
 			self._start_test_run,
 		)
+
+	def _clear_content(self) -> None:
+		"""Destroy this view's children without touching other views."""
+		for w in self.root.winfo_children():
+			w.destroy()
 
 	def reset_state(self) -> None:
 		self.runner_screen.reset()

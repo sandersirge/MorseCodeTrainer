@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-638%20passing-brightgreen.svg)](#-testing)
+[![Tests](https://img.shields.io/badge/tests-705%20passing-brightgreen.svg)](#-testing)
 
 An interactive Morse code learning application built with Python and CustomTkinter. Learn Morse code through guided translations, flashcard drills, free-form practice, and timed assessments.
 
@@ -39,9 +39,11 @@ Challenge yourself with randomized prompts, accuracy scoring, and detailed timin
 
 ### 🔊 Audio Engine
 
-High-quality Morse code audio powered by pygame-ce with custom WAV synthesis for authentic dit/dah tones.
+High-quality Morse code audio powered by pygame-ce with custom WAV synthesis for authentic dit/dah tones. An `AudioCache` service synthesizes audio on demand and caches the result for the session:
 
-> **Note**: Morse code audio file playback is not yet supported in Training and Testing modes. Audio is currently available only in Learning and Sandbox modes.
+- **Learning mode** — dynamic synthesis with static `.wav` file fallback
+- **Translation exercises** (morse→text) — dynamic synthesis
+- **Sandbox** — adjustable speed, pitch, and volume controls
 
 ## 🚀 Getting Started
 
@@ -96,7 +98,7 @@ python run.py
 
 ## 🧪 Testing
 
-The project includes a comprehensive test suite with **638 tests** covering models, controllers, services, utilities, resources, and exceptions.
+The project includes a comprehensive test suite with **705 tests** covering models, controllers, services, utilities, resources, and exceptions.
 
 ### Run Tests
 
@@ -128,10 +130,12 @@ After running tests, an HTML report is generated at `reports/report.html`.
 | ----------------------- | --------------------------------------------------- |
 | `tests/model/`          | Domain entities and session state                   |
 | `tests/controllers/`    | Presenter logic and UI coordination                 |
-| `tests/services/`       | Audio, data providers, settings                     |
+| `tests/services/`       | Audio cache, data providers, settings               |
 | `tests/utils/`          | Morse translator — unit, parametrized, and property |
 | `tests/resources/`      | Asset loading and constants                         |
 | `tests/exceptions/`     | Exception hierarchy, error codes, user messages     |
+| `tests/application/`    | DI wiring and bootstrap integration                 |
+| `tests/views/`          | Theme tokens, widget helpers, regressions           |
 | `tests/test_smoke.py`   | Fast bootstrap sanity checks (`pytest -m smoke`)    |
 
 ## 📁 Project Structure
@@ -161,9 +165,16 @@ MorseCodeProgram/
 ├── src/
 │   ├── main/
 │   │   ├── python/           # Application source code
-│   │   │   ├── application.py
-│   │   │   ├── main.py
+│   │   │   ├── application.py    # App wiring & DI bootstrap
+│   │   │   ├── main.py           # Entry point
+│   │   │   ├── navigator.py      # Frozen routing dataclass
+│   │   │   ├── view_stack.py     # Frame-swap navigation manager
 │   │   │   ├── controllers/  # MVC presenters
+│   │   │   │   ├── protocols.py      # Presenter Protocol types
+│   │   │   │   ├── flashcard_controller.py
+│   │   │   │   ├── translation_controller.py
+│   │   │   │   ├── test_controller.py
+│   │   │   │   └── translation_sandbox_controller.py
 │   │   │   ├── exceptions/   # Typed exception hierarchy
 │   │   │   │   ├── base.py       # ErrorCode, MorseTrainerError
 │   │   │   │   ├── session.py
@@ -177,18 +188,21 @@ MorseCodeProgram/
 │   │   │   │   ├── exercise_data.py  # Training/test samples
 │   │   │   │   └── constants.py      # Re-export shim
 │   │   │   ├── services/     # Audio, data providers
+│   │   │   │   ├── audio_cache.py    # Dynamic synthesis + cache
+│   │   │   │   ├── morse_audio.py    # WAV synthesis engine
+│   │   │   │   ├── audio_provider.py # pygame wrapper
+│   │   │   │   ├── audio_settings.py # User preferences
+│   │   │   │   └── data_provider.py  # Session factories
 │   │   │   ├── utils/        # Morse translator
 │   │   │   └── views/        # CustomTkinter UI
-│   │   │       ├── translation_section.py
-│   │   │       ├── audio_section.py
-│   │   │       └── ...
+│   │   │       ├── theme.py          # get_colors(), callbacks
+│   │   │       ├── widgets.py        # Shared UI components
+│   │   │       └── ...               # Screen views
 │   │   │
-│   │   └── resources/        # Audio files & assets
-│   │       ├── letters/      # Letter audio files
-│   │       ├── numbers/      # Number audio files
-│   │       ├── symbols/      # Symbol audio files
-│   │       ├── testing/      # Test audio prompts
-│   │       └── translation/  # Translation assets
+│   │   └── resources/        # Static audio files
+│   │       ├── letters/      # Letter audio (.wav)
+│   │       ├── numbers/      # Number audio (.wav)
+│   │       └── symbols/      # Symbol audio (.wav)
 │   │
 │   └── tests/                # pytest test suite
 │       ├── conftest.py       # Shared fixtures
@@ -206,15 +220,18 @@ The application follows an **MVC-style architecture**:
 - **Controllers** — Hold all domain logic, coordinate between models and views
 - **Models** — Immutable state objects using frozen dataclasses
 - **Views** — Presentation-only CustomTkinter components
-- **Services** — Audio playback, data providers, settings management
+- **Services** — Audio synthesis and caching, data providers, settings management
 
 ### Key Design Decisions
 
+- **Navigator Pattern**: A frozen `Navigator` dataclass provides named `Callable` fields for all routes. Views depend on `Navigator` instead of individual callbacks — adding a screen only requires a new field
+- **ViewStack Frame-Swap**: `ViewStack` registers a persistent `CTkFrame` per view. Navigation uses `pack_forget()`/`pack()` to swap visible frames — no widgets are destroyed on screen transitions
+- **Protocol-Based Decoupling**: Views annotate presenter parameters with `Protocol` types from `controllers/protocols.py`. Concrete presenters satisfy protocols implicitly — no inheritance required
+- **Dynamic Audio**: `AudioCache` synthesizes Morse audio on demand via `synthesize_morse_audio()`, caching results per session. Flashcard mode falls back to static `.wav` files; translation exercises use dynamic-only audio
 - **Immutable State**: Models expose frozen dataclass states to prevent accidental mutation
 - **Decoupled Audio**: pygame-ce integration is mocked in tests for CI stability
 - **Theme Tokens**: Centralized font/color constants in `views/theme.py`; all views call `get_colors()` at render time for correct light/dark theming
 - **Typed Exceptions**: `exceptions/` package provides an `ErrorCode` enum, Estonian user-facing messages, and a `get_user_message()` helper — no raw strings in error paths
-- **Componentized Views**: UI sections are modular (`translation_section.py`, `audio_section.py`) for easy framework swaps
 - **Separated Resource Concerns**: `resources/` split into `morse_data`, `audio_data`, and `exercise_data` modules
 
 ## 🛠️ Development
@@ -331,7 +348,9 @@ See [DEVPLAN.md](DEVPLAN.md) for detailed development plans.
 - [x] Typed exception hierarchy with Estonian user messages
 - [x] Property-based tests with Hypothesis
 - [x] Smoke test suite (`pytest -m smoke`)
-- [ ] Audio playback in Training and Testing modes
+- [x] Navigator routing & ViewStack frame-swap architecture
+- [x] Protocol-based presenter decoupling
+- [x] Dynamic audio synthesis via AudioCache
 - [ ] Custom deck import/export
 - [ ] Analytics exports (CSV summaries)
 

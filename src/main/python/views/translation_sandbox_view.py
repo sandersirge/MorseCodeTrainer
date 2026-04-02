@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 from tkinter import TclError, filedialog, messagebox
 
 import customtkinter as ctk
 
-from ..controllers.translation_sandbox_controller import (
-	SandboxState,
-	TranslationSandboxPresenter,
-)
+from ..controllers.protocols import SandboxPresenterProtocol
+from ..controllers.translation_sandbox_controller import SandboxState
+from ..navigator import Navigator
 from .audio_section import AudioSection
 from .theme import get_colors
 from .translation_section import TranslationSection
@@ -37,24 +35,27 @@ class TranslationSandboxView:
 		self,
 		*,
 		root,
-		clear_screen: Callable[[], None],
-		on_home: Callable[[], None],
+		nav: Navigator,
 		pygame_module,
-		presenter: TranslationSandboxPresenter,
+		presenter: SandboxPresenterProtocol,
 	) -> None:
 		self.root = root
-		self.clear_screen = clear_screen
-		self.on_home = on_home
+		self.nav = nav
 		self.pygame = pygame_module
 		self.presenter = presenter
 
 		self.translation_section: TranslationSection | None = None
 		self.audio_section: AudioSection | None = None
 
+	def _clear_content(self) -> None:
+		"""Destroy this view's children without touching other views."""
+		for w in self.root.winfo_children():
+			w.destroy()
+
 	def show(self) -> None:
 		if self.audio_section is not None:
 			self.audio_section.stop_playback()
-		self.clear_screen()
+		self._clear_content()
 
 		state = self.presenter.current_state()
 		self._build_layout()
@@ -114,7 +115,7 @@ class TranslationSandboxView:
 			on_volume_change=self._handle_volume_change,
 			on_speed_change=self._handle_speed_change,
 			on_pitch_change=self._handle_pitch_change,
-			on_home=self.on_home,
+			on_home=self.nav.home,
 			on_audio_error=self._show_error,
 		)
 		self.audio_section.container.grid(
