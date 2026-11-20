@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from ..strings import t
+
 
 class ErrorCode(Enum):
 	"""Programmatic error codes for handling specific error types."""
@@ -47,26 +49,26 @@ class ErrorMessage:
 # Estonian user-facing messages for common errors
 _ERROR_MESSAGES: dict[ErrorCode, str] = {
 	# Session errors
-	ErrorCode.SESSION_NOT_INITIALIZED: "Seanss pole käivitatud. Palun alusta uuesti.",
-	ErrorCode.SESSION_INVALID_STATE: "Seanss on vigases olekus. Palun alusta uuesti.",
-	ErrorCode.SESSION_INDEX_OUT_OF_BOUNDS: "Oled jõudnud harjutuse lõppu.",
+	ErrorCode.SESSION_NOT_INITIALIZED: t("error.seanss_pole_kaivitatud_palun"),
+	ErrorCode.SESSION_INVALID_STATE: t("error.seanss_on_vigases_olekus"),
+	ErrorCode.SESSION_INDEX_OUT_OF_BOUNDS: t("error.oled_joudnud_harjutuse_loppu"),
 	# Translation errors
-	ErrorCode.UNSUPPORTED_CHARACTER: "Sisend sisaldab tähemärki, mida ei saa morsekoodiks teisendada.",
-	ErrorCode.UNSUPPORTED_MORSE_SYMBOL: "Sisend sisaldab morsekoodi, mida ei tunta.",
-	ErrorCode.EMPTY_INPUT: "Palun sisesta tekst enne tõlkimist.",
-	ErrorCode.TRANSLATION_FAILED: "Tõlkimine ebaõnnestus. Kontrolli sisendit.",
+	ErrorCode.UNSUPPORTED_CHARACTER: t("error.sisend_sisaldab_tahemarki_mida"),
+	ErrorCode.UNSUPPORTED_MORSE_SYMBOL: t("error.sisend_sisaldab_morsekoodi_mida"),
+	ErrorCode.EMPTY_INPUT: t("error.palun_sisesta_tekst_enne"),
+	ErrorCode.TRANSLATION_FAILED: t("error.tolkimine_ebaonnestus_kontrolli_sisendit"),
 	# Audio errors
-	ErrorCode.NO_AUDIO_CONTENT: "Heli esitamiseks puudub morsekoodi sisu.",
-	ErrorCode.AUDIO_SYNTHESIS_FAILED: "Helifaili loomine ebaõnnestus.",
-	ErrorCode.AUDIO_SAVE_FAILED: "Helifaili salvestamine ebaõnnestus.",
-	ErrorCode.AUDIO_PLAYBACK_FAILED: "Heli esitamine ebaõnnestus.",
+	ErrorCode.NO_AUDIO_CONTENT: t("error.heli_esitamiseks_puudub_morsekoodi"),
+	ErrorCode.AUDIO_SYNTHESIS_FAILED: t("error.helifaili_loomine_ebaonnestus"),
+	ErrorCode.AUDIO_SAVE_FAILED: t("error.helifaili_salvestamine_ebaonnestus"),
+	ErrorCode.AUDIO_PLAYBACK_FAILED: t("error.heli_esitamine_ebaonnestus"),
 	# Validation errors
-	ErrorCode.INVALID_MODE: "Valitud režiim pole toetatud.",
-	ErrorCode.INVALID_CONFIGURATION: "Seadistus on vigane.",
-	ErrorCode.MISMATCHED_DATA: "Andmed ei ühti. Kontrolli sisendit.",
+	ErrorCode.INVALID_MODE: t("error.valitud_reziim_pole_toetatud"),
+	ErrorCode.INVALID_CONFIGURATION: t("error.seadistus_on_vigane"),
+	ErrorCode.MISMATCHED_DATA: t("error.andmed_ei_uhti_kontrolli"),
 	# Resource errors
-	ErrorCode.RESOURCE_NOT_FOUND: "Vajalikku ressurssi ei leitud.",
-	ErrorCode.RESOURCE_LOAD_FAILED: "Ressursi laadimine ebaõnnestus.",
+	ErrorCode.RESOURCE_NOT_FOUND: t("error.vajalikku_ressurssi_ei_leitud"),
+	ErrorCode.RESOURCE_LOAD_FAILED: t("error.ressursi_laadimine_ebaonnestus"),
 }
 
 
@@ -108,7 +110,7 @@ def get_user_message(error: Exception) -> str:
 	"""
 	if isinstance(error, MorseTrainerError):
 		return error.user_message
-	return f"Tekkis viga: {error}"
+	return t("error.generic", details=error)
 
 
 __all__ = [

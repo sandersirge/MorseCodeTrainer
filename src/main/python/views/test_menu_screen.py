@@ -5,6 +5,7 @@ from collections.abc import Callable
 import customtkinter as ctk
 
 from ..controllers.protocols import TestPresenterProtocol
+from ..strings import t
 from .test_shared import prepare_backdrop
 from .theme import get_colors
 from .widgets import make_button, make_card, make_font, make_frame, make_label
@@ -50,7 +51,7 @@ class TestMenuScreen:
 		card.grid_columnconfigure(0, weight=1)
 
 		make_label(
-			card, "Testi ennast", font=self._title_font, text_color=colors.text_primary
+			card, t("test.testi_ennast"), font=self._title_font, text_color=colors.text_primary
 		).grid(row=0, column=0, pady=(36, 10))
 
 		info_container = make_frame(card, fg_color=colors.section_bg, corner_radius=20)
@@ -61,18 +62,14 @@ class TestMenuScreen:
 
 		make_label(
 			info_container,
-			(
-				"Oled jõudnud testrežiimi juurde.\n\n"
-				"Soorita taimeriga töö, et proovile panna oma morsekoodi oskused.\n\n"
-				"Kui oled valmis, alusta testimist või pöördu tagasi kordama."
-			),
+			(t("test.oled_joudnud_testreziimi_juurde")),
 			font=self._callout_font,
 			wraplength=620,
 		).grid(row=1, column=0, padx=32, pady=(34, 26))
 
 		make_button(
 			info_container,
-			text="Alusta",
+			text=t("test.alusta"),
 			command=self._show_confirmation,
 			font=self._button_font,
 			variant="primary",
@@ -83,7 +80,7 @@ class TestMenuScreen:
 
 		make_button(
 			card,
-			text="Tagasi avalehele",
+			text=t("common.tagasi_avalehele"),
 			command=self.on_home,
 			font=self._button_font,
 			variant="danger",
@@ -100,11 +97,14 @@ class TestMenuScreen:
 		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.6, relheight=0.44)
 
 		make_label(
-			card, "Testi andmed puuduvad", font=self._title_font, text_color=colors.text_primary
+			card,
+			t("test.testi_andmed_puuduvad"),
+			font=self._title_font,
+			text_color=colors.text_primary,
 		).pack(pady=(36, 16))
 		make_label(
 			card,
-			"Testrežiimi jaoks pole hetkel ühtegi küsimust saadaval. Palun naase avalehele.",
+			t("test.testreziimi_jaoks_pole_hetkel"),
 			font=self._body_font,
 			text_color=colors.text_muted,
 			wraplength=520,
@@ -112,7 +112,7 @@ class TestMenuScreen:
 
 		make_button(
 			card,
-			text="Tagasi",
+			text=t("common.tagasi"),
 			command=self.on_home,
 			font=self._button_font,
 			variant="primary",
@@ -133,7 +133,7 @@ class TestMenuScreen:
 		card.grid_columnconfigure(0, weight=1)
 
 		make_label(
-			card, "Kas oled valmis?", font=self._title_font, text_color=colors.text_primary
+			card, t("test.kas_oled_valmis"), font=self._title_font, text_color=colors.text_primary
 		).grid(row=0, column=0, pady=(36, 12))
 
 		content = make_frame(card, fg_color="transparent")
@@ -148,10 +148,7 @@ class TestMenuScreen:
 
 		make_label(
 			message_box,
-			(
-				"Testi alustades käivitub taimer ja lahkumine katkestab katse.\n"
-				"Soovi korral saad veel kord üle vaadata teised õppemoodulid."
-			),
+			(t("test.testi_alustades_kaivitub_taimer")),
 			font=self._callout_font,
 			wraplength=560,
 		).grid(row=0, column=0, padx=28, pady=24, sticky="ew")
@@ -161,7 +158,7 @@ class TestMenuScreen:
 
 		make_button(
 			buttons,
-			text="Jah, alusta testi",
+			text=t("test.jah_alusta_testi"),
 			command=self.on_start,
 			font=self._button_font,
 			variant="primary",
@@ -171,7 +168,7 @@ class TestMenuScreen:
 
 		make_button(
 			buttons,
-			text="Ei, soovi kordamist",
+			text=t("test.ei_soovi_kordamist"),
 			command=self.show,
 			font=self._button_font,
 			variant="danger",

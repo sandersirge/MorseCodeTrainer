@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from ..exceptions import SessionNotInitializedError
 from ..model.translation_session import TranslationSession
+from ..strings import t
 from ..utils.morse_translator import normalize_morse
 
 
@@ -32,8 +33,8 @@ class TranslationPresenter:
 	"""Encapsulates translation-session behaviour for the UI layer."""
 
 	_TITLES = {
-		"text_to_morse": "Tekst → Morse",
-		"morse_to_text": "Morse → tekst",
+		"text_to_morse": t("common.tekst_morse"),
+		"morse_to_text": t("common.morse_tekst"),
 	}
 
 	def __init__(
@@ -150,9 +151,9 @@ class TranslationPresenter:
 			is_first=is_first,
 			is_last=is_last,
 			audio_morse=audio_morse,
-			progress_text=f"{progress_value:.1f}% läbitud",
+			progress_text=t("common.progress", percent=progress_value),
 			has_previous=not is_first,
-			next_label="Lõpeta treening" if is_last else "Liigu edasi",
+			next_label=t("common.lopeta_treening") if is_last else t("common.liigu_edasi"),
 			prompt_style=prompt_style,
 			audio_available=audio_morse is not None,
 		)

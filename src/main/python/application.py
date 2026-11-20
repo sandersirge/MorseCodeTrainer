@@ -18,6 +18,7 @@ from .services import (
 	create_translation_resources,
 	pygame,
 )
+from .strings import t
 from .view_stack import ViewStack
 from .views.flashcard_view import FlashcardView
 from .views.home_view import HomeView, IntroductionView
@@ -26,7 +27,7 @@ from .views.translation_sandbox_view import TranslationSandboxView
 from .views.translation_view import TranslationView
 from .views.window import MainWindow
 
-APP_TITLE = "Morsekoodi õppimisprogramm"
+APP_TITLE = t("app.morsekoodi_oppimisprogramm")
 
 
 class Application:

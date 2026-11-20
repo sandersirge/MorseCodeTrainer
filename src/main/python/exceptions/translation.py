@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..strings import t
 from .base import ErrorCode, MorseTrainerError
 
 
@@ -22,7 +23,7 @@ class UnsupportedCharacterError(TranslationError):
 		super().__init__(
 			f"Unsupported character '{character}' in input",
 			code=ErrorCode.UNSUPPORTED_CHARACTER,
-			user_message=user_message or f"Tähemärk '{character}' pole toetatud.",
+			user_message=user_message or t("error.unsupported_character", char=character),
 		)
 
 

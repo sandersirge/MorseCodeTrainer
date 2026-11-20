@@ -7,6 +7,7 @@ import customtkinter as ctk
 from ..controllers.flashcard_controller import FlashcardState
 from ..controllers.protocols import FlashcardPresenterProtocol
 from ..navigator import Navigator
+from ..strings import t
 from .theme import get_colors, register_theme_callback
 from .widgets import (
 	font_mono,
@@ -100,11 +101,14 @@ class FlashcardView:
 		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.72, relheight=0.7)
 
 		make_label(
-			card, "Sümbolitega tutvumine", font=self._title_font, text_color=colors.text_primary
+			card,
+			t("flashcards.sumbolitega_tutvumine"),
+			font=self._title_font,
+			text_color=colors.text_primary,
 		).pack(pady=(32, 12))
 		make_label(
 			card,
-			"Vali kategooria, mida soovid õppida.",
+			t("flashcards.vali_kategooria_mida_soovid"),
 			font=self._body_font,
 			text_color=colors.text_primary,
 			wraplength=640,
@@ -114,9 +118,9 @@ class FlashcardView:
 		buttons.pack(expand=True, pady=(0, 24))
 
 		for text, callback in (
-			("Õpi tähti", self.show_letters),
-			("Õpi numbreid", self.show_numbers),
-			("Õpi kirjavahemärke", self.show_symbols),
+			(t("flashcards.opi_tahti"), self.show_letters),
+			(t("flashcards.opi_numbreid"), self.show_numbers),
+			(t("flashcards.opi_kirjavahemarke"), self.show_symbols),
 		):
 			make_button(
 				buttons,
@@ -131,7 +135,7 @@ class FlashcardView:
 
 		make_button(
 			card,
-			text="Tagasi avalehele",
+			text=t("common.tagasi_avalehele"),
 			command=self.nav.home,
 			font=self._button_font,
 			variant="danger",
@@ -142,13 +146,13 @@ class FlashcardView:
 	# Category views -------------------------------------------------------
 
 	def show_letters(self) -> None:
-		self._start_category("tähed", "Tähekaartide andmed puuduvad.")
+		self._start_category("tähed", t("flashcards.tahekaartide_andmed_puuduvad"))
 
 	def show_numbers(self) -> None:
-		self._start_category("numbrid", "Numbrikaartide andmed puuduvad.")
+		self._start_category("numbrid", t("flashcards.numbrikaartide_andmed_puuduvad"))
 
 	def show_symbols(self) -> None:
-		self._start_category("märgid", "Kirjavahemärkide andmed puuduvad.")
+		self._start_category("märgid", t("flashcards.kirjavahemarkide_andmed_puuduvad"))
 
 	def _start_category(self, category: str, missing_message: str) -> None:
 		state = self.presenter.start(category)
@@ -197,7 +201,7 @@ class FlashcardView:
 
 		make_button(
 			card,
-			text="Tagasi",
+			text=t("common.tagasi"),
 			command=self.show_menu,
 			font=self._button_font,
 			variant="primary",
@@ -250,7 +254,7 @@ class FlashcardView:
 
 		self._flip_button = make_button(
 			self._controls,
-			text="Pööra kaarti",
+			text=t("flashcards.poora_kaarti"),
 			command=self.toggle_card,
 			font=self._button_font,
 			variant="primary",
@@ -261,7 +265,7 @@ class FlashcardView:
 
 		self.prev_button = make_button(
 			self._controls,
-			text="Liigu tagasi",
+			text=t("common.liigu_tagasi"),
 			command=self.previous_card,
 			font=self._button_font,
 			variant="muted",
@@ -283,7 +287,7 @@ class FlashcardView:
 
 		self.audio_button = make_button(
 			self._controls,
-			text="Kuula heli",
+			text=t("flashcards.kuula_heli"),
 			command=self.play_flashcard_audio,
 			font=self._button_font,
 			variant="positive",
@@ -294,7 +298,7 @@ class FlashcardView:
 
 		self._back_button = make_button(
 			self._card,
-			text="Tagasi valikute juurde",
+			text=t("common.tagasi_valikute_juurde"),
 			command=self.show_menu,
 			font=self._button_font,
 			variant="danger",
@@ -317,7 +321,7 @@ class FlashcardView:
 			self.progress_bar.set_progress(display_value, animated=should_animate)
 
 		if self.progress_label:
-			progress_text = f"{self._peak_progress_value:.1f}% läbitud"
+			progress_text = t("common.progress", percent=self._peak_progress_value)
 			self.progress_label.configure(text=progress_text)
 
 		if self.display_label:
@@ -395,7 +399,9 @@ class FlashcardView:
 		if not self.state or not self.state.audio_morse:
 			return
 		if not self.audio.play_morse(self.state.audio_morse):
-			messagebox.showerror("Heli", "Heli ei õnnestunud esitada.", parent=self.root)
+			messagebox.showerror(
+				t("flashcards.heli"), t("common.heli_ei_onnestunud_esitada"), parent=self.root
+			)
 
 	# Completion -----------------------------------------------------------
 
@@ -415,9 +421,9 @@ class FlashcardView:
 		card.grid_rowconfigure(1, weight=1)
 		card.grid_columnconfigure(0, weight=1)
 
-		make_label(card, "Lõpp", font=self._title_font, text_color=colors.text_primary).grid(
-			row=0, column=0, pady=(36, 24)
-		)
+		make_label(
+			card, t("common.lopp"), font=self._title_font, text_color=colors.text_primary
+		).grid(row=0, column=0, pady=(36, 24))
 
 		message_block = make_frame(card, fg_color=colors.section_bg, corner_radius=28)
 		message_block.grid(row=1, column=0, padx=36, pady=(0, 36), sticky="nsew")
@@ -426,7 +432,7 @@ class FlashcardView:
 
 		message_label = make_label(
 			message_block,
-			"Tubli töö! Kõik kaardid on läbitud. Vajuta 'OK', et naasta valikute juurde.",
+			t("flashcards.tubli_too_koik_kaardid"),
 			font=self._message_font,
 			text_color=colors.text_muted,
 		)
@@ -439,7 +445,7 @@ class FlashcardView:
 
 		make_button(
 			button_row,
-			text="OK",
+			text=t("common.ok"),
 			command=self.show_menu,
 			font=self._large_button_font,
 			variant="positive",

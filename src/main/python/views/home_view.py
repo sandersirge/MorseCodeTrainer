@@ -6,6 +6,7 @@ from tkinter import TclError
 import customtkinter as ctk
 
 from ..navigator import Navigator
+from ..strings import t
 from .theme import (
 	get_appearance_mode,
 	get_colors,
@@ -24,8 +25,8 @@ from .widgets import (
 # Colour emoji can crash Tk on Linux/X11 ("BadLength" in XRender), so Linux
 # gets plain labels.
 _USE_EMOJI = not sys.platform.startswith("linux")
-_LABEL_LIGHT = "🌞 Hele" if _USE_EMOJI else "Hele"
-_LABEL_DARK = "🌙 Tume" if _USE_EMOJI else "Tume"
+_LABEL_LIGHT = t("home.theme_light_emoji") if _USE_EMOJI else t("home.theme_light")
+_LABEL_DARK = t("home.theme_dark_emoji") if _USE_EMOJI else t("home.theme_dark")
 
 
 class HomeView:
@@ -104,13 +105,13 @@ class HomeView:
 		add_focus_highlight(self._theme_segmented)
 
 		self._title_label = make_label(
-			self._hero, "Morsekoodi rakendus", font_size=38, weight="bold"
+			self._hero, t("home.morsekoodi_rakendus"), font_size=38, weight="bold"
 		)
 		self._title_label.pack(pady=(20, 8))
 
 		self._subtitle_label = make_label(
 			self._hero,
-			"Programm morsekoodi õppimiseks, harjutamiseks ja testimiseks ning tõlkimiseks.",
+			t("home.programm_morsekoodi_oppimiseks_harjutamiseks"),
 			font_size=18,
 			weight="bold",
 		)
@@ -120,11 +121,11 @@ class HomeView:
 		self._buttons_frame.pack(pady=(0, 24))
 
 		menu_items = [
-			("Tutvustus", self.nav.introduction),
-			("Õpe", self.nav.flashcards),
-			("Harjutused", self.nav.translation),
-			("Test", self.nav.test),
-			("Sandbox", self.nav.translation_sandbox),
+			(t("home.tutvustus"), self.nav.introduction),
+			(t("home.ope"), self.nav.flashcards),
+			(t("home.harjutused"), self.nav.translation),
+			(t("home.test"), self.nav.test),
+			(t("home.sandbox"), self.nav.translation_sandbox),
 		]
 
 		for label, callback in menu_items:
@@ -147,7 +148,7 @@ class HomeView:
 
 		self._exit_btn = make_button(
 			self._footer,
-			text="Välju programmist",
+			text=t("home.valju_programmist"),
 			command=self.nav.exit,
 			font_size=18,
 			variant="danger",
@@ -267,7 +268,7 @@ class IntroductionView:
 		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.68, relheight=0.68)
 
 		make_label(
-			card, "Tutvustus", font_size=34, weight="bold", text_color=colors.text_primary
+			card, t("home.tutvustus"), font_size=34, weight="bold", text_color=colors.text_primary
 		).pack(pady=(36, 24))
 
 		first_block = make_frame(card, fg_color=colors.section_bg, corner_radius=28)
@@ -275,13 +276,7 @@ class IntroductionView:
 
 		first_text = make_label(
 			first_block,
-			(
-				"Morsekood mõõdab aega 'ühikutes': punkt kestab ühe ühiku, kriips kolm ühikut. "
-				"Sümboli sees eraldab kahe signaali vahelist pausi ühe ühiku pikkune vaikuse segment. "
-				"Sümbolite vahel hoitakse kolme ühiku pikkust pausi ja sõnade vahel seitset ühikut. "
-				"Tekstina kirjutades tähistatakse signaale punktide ja sidekriipsudega (näiteks . ja -). Ühe ühiku pikkune paus "
-				"pole kuvatud, sümbolite vahe tähistatakse ühe tühiku abil ning sõnade vahel on kolm tühikut tühja ala."
-			),
+			(t("home.morsekood_moodab_aega_uhikutes")),
 			font_size=20,
 			weight="bold",
 			text_color=colors.text_muted,
@@ -297,11 +292,7 @@ class IntroductionView:
 
 		second_text = make_label(
 			second_block,
-			(
-				"Õpe võimaldab Flashcard meetodi abil süsteemselt läbi käia tähed, numbrid ja kirjavahemärgid ning kuulata nende helinäiteid. "
-				"Tõlkimises saab harjutada keerulisemaid näiteid mõlemas suunas: tekst → morse ja morse → tekst; "
-				"lisaks saab vihjeid ja kontrollida vastuseid. Testis käivitatakse taimeriga töö, mille lõpus saab põhjaliku tagasiside ning võimaluse vastused üle vaadata."
-			),
+			(t("home.ope_voimaldab_flashcard_meetodi")),
 			font_size=20,
 			weight="bold",
 			text_color=colors.text_muted,
@@ -317,7 +308,7 @@ class IntroductionView:
 
 		back_btn = make_button(
 			button_row,
-			text="Tagasi avalehele",
+			text=t("common.tagasi_avalehele"),
 			command=self.nav.home,
 			font_size=18,
 			variant="danger",

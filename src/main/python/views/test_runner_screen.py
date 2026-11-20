@@ -8,6 +8,7 @@ import customtkinter as ctk
 from ..controllers.protocols import TestPresenterProtocol
 from ..controllers.test_controller import TestQuestionState
 from ..model.test_session import TestSummary
+from ..strings import t
 from .test_shared import prepare_backdrop
 from .theme import get_colors, register_theme_callback
 from .widgets import (
@@ -107,9 +108,9 @@ class TestRunnerScreen:
 		card.grid_rowconfigure(1, weight=1)
 		card.grid_columnconfigure(0, weight=1)
 
-		make_label(card, "Tulemused", font=self._title_font, text_color=colors.text_primary).grid(
-			row=0, column=0, pady=(36, 16)
-		)
+		make_label(
+			card, t("test.tulemused"), font=self._title_font, text_color=colors.text_primary
+		).grid(row=0, column=0, pady=(36, 16))
 
 		result_frame = make_frame(card, fg_color=colors.section_bg, corner_radius=24)
 		result_frame.grid(row=1, column=0, padx=48, pady=(0, 28), sticky="nsew")
@@ -142,14 +143,14 @@ class TestRunnerScreen:
 
 		make_label(
 			speeds,
-			f"Sõnade kiirus: {summary.word_speed} sõna/min",
+			t("test.word_speed", speed=summary.word_speed),
 			font=self._muted_font,
 			text_color=colors.text_muted,
 		).grid(row=0, column=0, padx=12)
 
 		make_label(
 			speeds,
-			f"Lausete kiirus: {summary.sentence_speed} lauset/min",
+			t("test.sentence_speed", speed=summary.sentence_speed),
 			font=self._muted_font,
 			text_color=colors.text_muted,
 		).grid(row=0, column=1, padx=12)
@@ -159,7 +160,7 @@ class TestRunnerScreen:
 
 		make_button(
 			button_row,
-			text="Vaata vastuseid",
+			text=t("test.vaata_vastuseid"),
 			command=self._review_answers,
 			font=self._button_font,
 			variant="primary",
@@ -169,7 +170,7 @@ class TestRunnerScreen:
 
 		make_button(
 			button_row,
-			text="Tagasi menüüsse",
+			text=t("test.tagasi_menuusse"),
 			command=self.on_exit_to_menu,
 			font=self._button_font,
 			variant="muted",
@@ -208,12 +209,12 @@ class TestRunnerScreen:
 			self.progress_bar = None
 
 		if _alive(self.progress_percent_label):
-			self.progress_percent_label.configure(text="0.0% läbitud")
+			self.progress_percent_label.configure(text=t("test.progress_zero"))
 		else:
 			self.progress_percent_label = None
 
 		if _alive(self.counter_label):
-			self.counter_label.configure(text="Küsimus 0/0")
+			self.counter_label.configure(text=t("test.question_zero"))
 		else:
 			self.counter_label = None
 
@@ -318,7 +319,7 @@ class TestRunnerScreen:
 			font=self._question_font,
 			width=620,
 			corner_radius=12,
-			placeholder_text="Sisesta vastus siia",
+			placeholder_text=t("test.sisesta_vastus_siia"),
 		)
 		self.answer_entry.grid(row=0, column=0, sticky="ew")
 		self.answer_entry.bind("<Return>", self._handle_submit)
@@ -329,7 +330,7 @@ class TestRunnerScreen:
 
 		self.prev_button = make_button(
 			self._action_row,
-			text="Liigu tagasi",
+			text=t("common.liigu_tagasi"),
 			command=self._previous_question,
 			font=self._button_font,
 			variant="muted",
@@ -340,7 +341,7 @@ class TestRunnerScreen:
 
 		self.next_button = make_button(
 			self._action_row,
-			text="Liigu edasi",
+			text=t("common.liigu_edasi"),
 			command=self._next_question,
 			font=self._button_font,
 			variant="primary",
@@ -351,7 +352,7 @@ class TestRunnerScreen:
 
 		make_button(
 			self._action_row,
-			text="Katkesta test",
+			text=t("test.katkesta_test"),
 			command=self._cancel_test,
 			font=self._button_font,
 			variant="danger",
@@ -373,11 +374,13 @@ class TestRunnerScreen:
 			self.progress_bar.set_progress(progress_ratio, animated=should_animate)
 
 		if self.progress_percent_label:
-			progress_text = f"{self._peak_progress_value:.1f}% läbitud"
+			progress_text = t("common.progress", percent=self._peak_progress_value)
 			self.progress_percent_label.configure(text=progress_text)
 
 		if self.counter_label:
-			self.counter_label.configure(text=f"Küsimus {state.question_number}/{state.total}")
+			self.counter_label.configure(
+				text=t("common.question_counter", number=state.question_number, total=state.total)
+			)
 
 		if self.question_label:
 			self.question_label.configure(text=state.prompt)
@@ -392,7 +395,7 @@ class TestRunnerScreen:
 			self.prev_button.configure(state=prev_state)
 
 		if self.next_button:
-			next_label = "Liigu edasi" if state.has_next else "Lõpeta test"
+			next_label = t("common.liigu_edasi") if state.has_next else t("test.lopeta_test")
 			self.next_button.configure(text=next_label)
 
 	def _apply_colors(self) -> None:

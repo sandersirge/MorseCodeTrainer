@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from ..exceptions import SessionNotInitializedError
 from ..model.flashcard_session import FlashcardSession
+from ..strings import t
 
 
 @dataclass(frozen=True)
@@ -91,9 +92,9 @@ class FlashcardPresenter:
 			is_first=is_first,
 			is_last=is_last,
 			audio_morse=card.back,
-			progress_text=f"{progress_value:.1f}% läbitud",
+			progress_text=t("common.progress", percent=progress_value),
 			has_previous=not is_first,
-			next_label="Lõpeta treening" if is_last else "Liigu edasi",
+			next_label=t("common.lopeta_treening") if is_last else t("common.liigu_edasi"),
 			show_audio_button=self._showing_back,
 		)
 

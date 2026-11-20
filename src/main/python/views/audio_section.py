@@ -10,6 +10,7 @@ import customtkinter as ctk
 
 from ..controllers.translation_sandbox_controller import SandboxState
 from ..services.audio_settings import MAX_FREQUENCY_HZ, MAX_WPM, MIN_FREQUENCY_HZ, MIN_WPM
+from ..strings import t
 from .theme import get_colors
 from .widgets import (
 	font_button_large,
@@ -93,14 +94,13 @@ class AudioSection:
 		header_panel.grid(row=0, column=0, padx=32, pady=(28, 18))
 		make_label(
 			header_panel,
-			"Helisätted ja salvestus",
+			t("audio.helisatted_ja_salvestus"),
 			font=self._title_font,
 			text_color=get_colors().text_muted,
 		).pack()
 		make_label(
 			header_panel,
-			"Kehtivad kõigis harjutustes. Kui üldine kiirus on väiksem, jäävad\n"
-			"tähed kiireks, aga vahed pikenevad (Farnsworthi meetod).",
+			t("audio.kehtivad_koigis_harjutustes_kui"),
 			font=make_font(size=14),
 			text_color=get_colors().text_placeholder,
 			justify="center",
@@ -108,7 +108,7 @@ class AudioSection:
 		if not self.audio.available:
 			make_label(
 				header_panel,
-				"Heliseadet ei leitud: esitamine pole võimalik, salvestamine töötab.",
+				t("audio.heliseadet_ei_leitud_esitamine"),
 				font=make_font(size=14, weight="bold"),
 				text_color=get_colors().error_text,
 				justify="center",
@@ -122,7 +122,7 @@ class AudioSection:
 			sliders_panel,
 			column=0,
 			key="volume",
-			title="Helitugevus\n",
+			title=t("audio.helitugevus"),
 			from_value=0,
 			to_value=100,
 			number_of_steps=100,
@@ -134,7 +134,7 @@ class AudioSection:
 			sliders_panel,
 			column=1,
 			key="wpm",
-			title="Tähtede\nkiirus",
+			title=t("audio.tahtede_kiirus"),
 			from_value=MIN_WPM,
 			to_value=MAX_WPM,
 			number_of_steps=MAX_WPM - MIN_WPM,
@@ -146,7 +146,7 @@ class AudioSection:
 			sliders_panel,
 			column=2,
 			key="effective_wpm",
-			title="Üldine\nkiirus",
+			title=t("audio.uldine_kiirus"),
 			from_value=MIN_WPM,
 			to_value=MAX_WPM,
 			number_of_steps=MAX_WPM - MIN_WPM,
@@ -158,7 +158,7 @@ class AudioSection:
 			sliders_panel,
 			column=3,
 			key="pitch",
-			title="Helikõrgus\n",
+			title=t("audio.helikorgus"),
 			from_value=MIN_FREQUENCY_HZ,
 			to_value=MAX_FREQUENCY_HZ,
 			number_of_steps=int((MAX_FREQUENCY_HZ - MIN_FREQUENCY_HZ) // 10),
@@ -173,7 +173,7 @@ class AudioSection:
 
 		self.play_audio_button = make_button(
 			playback_panel,
-			text="Esita heli",
+			text=t("common.esita_heli"),
 			command=self.on_play,
 			font=self._button_font,
 			variant="positive",
@@ -183,7 +183,7 @@ class AudioSection:
 
 		self.stop_audio_button = make_button(
 			playback_panel,
-			text="Peata heli",
+			text=t("audio.peata_heli"),
 			command=self.stop_playback,
 			font=self._button_font,
 			variant="danger",
@@ -197,7 +197,7 @@ class AudioSection:
 
 		self.save_audio_button = make_button(
 			save_panel,
-			text="Salvesta heli",
+			text=t("audio.salvesta_heli"),
 			command=self.on_save,
 			font=self._button_font,
 			variant="secondary",
@@ -207,7 +207,7 @@ class AudioSection:
 
 		self.save_audio_as_button = make_button(
 			save_panel,
-			text="Salvesta nimega...",
+			text=t("audio.salvesta_nimega"),
 			command=self.on_save_as,
 			font=self._button_font,
 			variant="secondary",
@@ -221,7 +221,7 @@ class AudioSection:
 
 		make_button(
 			navigation_panel,
-			text="Tagasi avalehele",
+			text=t("common.tagasi_avalehele"),
 			command=self._handle_home,
 			font=self._button_font,
 			variant="danger",
@@ -315,7 +315,7 @@ class AudioSection:
 			self.mark_audio_playing(True)
 			return True
 		self.mark_audio_playing(False)
-		self.on_audio_error("Heli ei saa esitada.")
+		self.on_audio_error(t("audio.heli_ei_saa_esitada"))
 		return False
 
 	def stop_playback(self) -> None:

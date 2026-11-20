@@ -7,6 +7,7 @@ import customtkinter as ctk
 from ..controllers.protocols import TranslationPresenterProtocol
 from ..controllers.translation_controller import TranslationState
 from ..navigator import Navigator
+from ..strings import t
 from .theme import get_colors, register_theme_callback
 from .widgets import (
 	font_mono,
@@ -119,12 +120,15 @@ class TranslationView:
 		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.74, relheight=0.7)
 
 		make_label(
-			card, "Tõlkimise harjutamine", font=self._title_font, text_color=colors.text_primary
+			card,
+			t("translation.tolkimise_harjutamine"),
+			font=self._title_font,
+			text_color=colors.text_primary,
 		).pack(pady=(36, 16))
 
 		make_label(
 			card,
-			"Vali suund, milles soovid tõlkimist harjutada. Saad kasutada vihjeid ning vastuseid kontrollida.",
+			t("translation.vali_suund_milles_soovid"),
 			font=self._section_font,
 			text_color=colors.text_primary,
 			wraplength=640,
@@ -135,8 +139,8 @@ class TranslationView:
 
 		for idx, (label, callback) in enumerate(
 			(
-				("Tekst → Morse", self.show_text_to_morse),
-				("Morse → tekst", self.show_morse_to_text),
+				(t("common.tekst_morse"), self.show_text_to_morse),
+				(t("common.morse_tekst"), self.show_morse_to_text),
 			)
 		):
 			make_button(
@@ -152,7 +156,7 @@ class TranslationView:
 
 		make_button(
 			card,
-			text="Tagasi avalehele",
+			text=t("common.tagasi_avalehele"),
 			command=self.nav.home,
 			font=self._button_font,
 			variant="danger",
@@ -180,11 +184,14 @@ class TranslationView:
 			card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.56, relheight=0.4)
 
 			make_label(
-				card, "Andmeid pole", font=self._title_font, text_color=colors.text_primary
+				card,
+				t("translation.andmeid_pole"),
+				font=self._title_font,
+				text_color=colors.text_primary,
 			).pack(pady=(36, 12))
 			make_label(
 				card,
-				"Tõlketreeningu andmed puuduvad. Palun naase menüüsse ja vali muu režiim.",
+				t("translation.tolketreeningu_andmed_puuduvad_palun"),
 				font=self._body_font,
 				text_color=colors.text_muted,
 				wraplength=520,
@@ -192,7 +199,7 @@ class TranslationView:
 
 			make_button(
 				card,
-				text="Tagasi",
+				text=t("common.tagasi"),
 				command=self.show_menu,
 				font=self._button_font,
 				variant="primary",
@@ -287,9 +294,9 @@ class TranslationView:
 			width=520,
 			height=48,
 			corner_radius=12,
-			placeholder_text="Sisesta morsekood (nt .- -...)"
+			placeholder_text=t("translation.sisesta_morsekood_nt")
 			if state.mode == "text_to_morse"
-			else "Sisesta tekst",
+			else t("translation.sisesta_tekst"),
 		)
 		self.entry.grid(row=4, column=0, pady=(0, 16))
 		self.entry.bind("<Return>", self._on_translation_enter)
@@ -310,7 +317,7 @@ class TranslationView:
 
 		self._check_button = make_button(
 			self._actions,
-			text="Kontrolli vastust",
+			text=t("translation.kontrolli_vastust"),
 			command=self.check_translation_answer,
 			font=self._button_font,
 			variant="primary",
@@ -321,7 +328,7 @@ class TranslationView:
 
 		self.hint_button = make_button(
 			self._actions,
-			text="Näita vihjet",
+			text=t("translation.naita_vihjet"),
 			command=self.show_translation_hint,
 			font=self._button_font,
 			variant="primary",
@@ -332,7 +339,7 @@ class TranslationView:
 
 		self.audio_button = make_button(
 			self._actions,
-			text="Esita heli",
+			text=t("common.esita_heli"),
 			command=self.play_translation_audio,
 			font=self._button_font,
 			variant="positive",
@@ -346,7 +353,7 @@ class TranslationView:
 
 		self.prev_button = make_button(
 			self._navigation,
-			text="Liigu tagasi",
+			text=t("common.liigu_tagasi"),
 			command=self.translation_previous,
 			font=self._button_font,
 			variant="muted",
@@ -368,7 +375,7 @@ class TranslationView:
 
 		self._back_button = make_button(
 			self._card,
-			text="Tagasi valikute juurde",
+			text=t("common.tagasi_valikute_juurde"),
 			command=self.show_menu,
 			font=self._button_font,
 			variant="danger",
@@ -395,7 +402,7 @@ class TranslationView:
 			self.progress_bar.set_progress(display_value, animated=should_animate)
 
 		if self.progress_label:
-			progress_text = f"{self._peak_progress_value:.1f}% läbitud"
+			progress_text = t("common.progress", percent=self._peak_progress_value)
 			self.progress_label.configure(text=progress_text)
 
 		if self.prompt_label:
@@ -502,7 +509,7 @@ class TranslationView:
 		on_oige, _ = self.presenter.check_answer(kasutaja)
 
 		if on_oige:
-			self._set_feedback("Õige vastus! Tubli töö.", True)
+			self._set_feedback(t("translation.oige_vastus_tubli_too"), True)
 			if self.hint_label:
 				self.hint_label.configure(text="")
 			if self.hint_button:
@@ -510,21 +517,21 @@ class TranslationView:
 			self._failure_count = 0
 		else:
 			self._failure_count += 1
-			self._set_feedback("Vale vastus. Proovi uuesti!", False)
+			self._set_feedback(t("translation.vale_vastus_proovi_uuesti"), False)
 			if self._failure_count >= 5 and self.hint_button:
 				self.hint_button.configure(state="normal")
 				if self.hint_label:
-					self.hint_label.configure(text="Vihje on saadaval, kui soovid.")
+					self.hint_label.configure(text=t("translation.vihje_on_saadaval_kui"))
 
 	def play_translation_audio(self) -> None:
 		morse = self.presenter.audio_morse()
 		if not morse:
-			self._set_feedback("Sellele kirjele heli pole.", False)
+			self._set_feedback(t("translation.sellele_kirjele_heli_pole"), False)
 			return
 		if self.audio.play_morse(morse):
-			self._set_feedback("Heli esitatakse.", True)
+			self._set_feedback(t("translation.heli_esitatakse"), True)
 		else:
-			self._set_feedback("Heli ei õnnestunud esitada.", False)
+			self._set_feedback(t("common.heli_ei_onnestunud_esitada"), False)
 
 	def _set_feedback(self, text: str, success: bool) -> None:
 		if not self.feedback_label:
@@ -554,9 +561,9 @@ class TranslationView:
 		card.grid_columnconfigure(0, weight=1)
 		card.grid_rowconfigure(1, weight=1)
 
-		make_label(card, "Lõpp", font=self._title_font, text_color=colors.text_primary).grid(
-			row=0, column=0, pady=(36, 24)
-		)
+		make_label(
+			card, t("common.lopp"), font=self._title_font, text_color=colors.text_primary
+		).grid(row=0, column=0, pady=(36, 24))
 
 		message_block = make_frame(card, fg_color=colors.section_bg, corner_radius=28)
 		message_block.grid(row=1, column=0, padx=36, pady=(0, 36), sticky="nsew")
@@ -565,7 +572,7 @@ class TranslationView:
 
 		message_label = make_label(
 			message_block,
-			"Tubli! Jõudsid lõppu. Vajuta nupul 'OK!', et liikuda tagasi eelmisele lehele.",
+			t("translation.tubli_joudsid_loppu_vajuta"),
 			font=make_font(size=22, weight="bold"),
 			text_color=colors.text_muted,
 		)
@@ -578,7 +585,7 @@ class TranslationView:
 
 		make_button(
 			button_row,
-			text="OK",
+			text=t("common.ok"),
 			command=self.show_menu,
 			font=self._button_font,
 			variant="positive",

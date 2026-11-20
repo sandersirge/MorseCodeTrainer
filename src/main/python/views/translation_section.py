@@ -8,6 +8,7 @@ from tkinter import TclError
 import customtkinter as ctk
 
 from ..controllers.translation_sandbox_controller import SandboxState
+from ..strings import t
 from .theme import get_colors
 from .widgets import (
 	font_button_large,
@@ -51,16 +52,16 @@ class TranslationSection:
 		self._hint_font = make_font(size=16, weight="bold")
 		self._mono_font = font_mono(size=21)
 
-		self._input_placeholder_text = "Sisesta algtekst/morsekood siia..."
-		self._output_placeholder_text = "Kliki tõlgi, et kuvada tulemus..."
+		self._input_placeholder_text = t("sandbox.sisesta_algtekst_morsekood_siia")
+		self._output_placeholder_text = t("sandbox.kliki_tolgi_et_kuvada")
 		self._input_placeholder_active = False
 		self._output_placeholder_active = False
 
 		self.mode_selector: ctk.CTkSegmentedButton | None = None
-		self._mode_value_var = ctk.StringVar(value="Tekst → Morse")
+		self._mode_value_var = ctk.StringVar(value=t("common.tekst_morse"))
 		self._label_to_mode = {
-			"Tekst → Morse": "text_to_morse",
-			"Morse → tekst": "morse_to_text",
+			t("common.tekst_morse"): "text_to_morse",
+			t("common.morse_tekst"): "morse_to_text",
 		}
 		self._suppress_mode_callback = False
 		self.input_label: ctk.CTkLabel | None = None
@@ -74,7 +75,7 @@ class TranslationSection:
 	def _build(self) -> None:
 		intro = make_label(
 			self.container,
-			"Sisesta tekst või morsekood ning vajuta 'Tõlgi'. Kasti tühjendamiseks kliki 'Puhasta'.",
+			t("sandbox.sisesta_tekst_voi_morsekood"),
 			font=self._title_font,
 			text_color=get_colors().text_muted,
 			wraplength=420,
@@ -87,7 +88,7 @@ class TranslationSection:
 
 		make_label(
 			mode_card,
-			"Tõlkesuund",
+			t("sandbox.tolkesuund"),
 			font=self._body_font,
 			text_color=get_colors().text_muted,
 			justify="left",
@@ -139,7 +140,7 @@ class TranslationSection:
 
 		make_button(
 			actions,
-			text="Tõlgi",
+			text=t("sandbox.tolgi"),
 			command=self._on_translate,
 			font=self._button_font,
 			variant="primary",
@@ -149,7 +150,7 @@ class TranslationSection:
 
 		make_button(
 			actions,
-			text="Puhasta",
+			text=t("sandbox.puhasta"),
 			command=self._on_clear,
 			font=self._button_font,
 			variant="muted",

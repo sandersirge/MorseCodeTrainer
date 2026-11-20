@@ -9,6 +9,7 @@ from ..controllers.protocols import SandboxPresenterProtocol
 from ..controllers.translation_sandbox_controller import SandboxState
 from ..exceptions import MorseTrainerError
 from ..navigator import Navigator
+from ..strings import t
 from .audio_section import AudioSection
 from .theme import get_colors
 from .translation_section import TranslationSection
@@ -84,12 +85,15 @@ class TranslationSandboxView:
 		self._body_font = font_body()
 
 		ctk.CTkLabel(
-			card, text="Sandbox tõlkimine", font=self._title_font, text_color=_c.text_primary
+			card,
+			text=t("sandbox.sandbox_tolkimine"),
+			font=self._title_font,
+			text_color=_c.text_primary,
 		).grid(row=0, column=0, columnspan=2, pady=(36, 16))
 
 		ctk.CTkLabel(
 			card,
-			text=("Katseta erinevaid tõlkesuundi, muuda helisätteid ning salvesta tulemused."),
+			text=(t("sandbox.katseta_erinevaid_tolkesuundi_muuda")),
 			font=self._body_font,
 			text_color=_c.text_muted,
 			wraplength=780,
@@ -176,7 +180,9 @@ class TranslationSandboxView:
 			self._show_error(exc.user_message)
 			return
 		messagebox.showinfo(
-			"Helifail salvestatud", f"Fail salvestatud:\n{saved_path}", parent=self.root
+			t("sandbox.helifail_salvestatud"),
+			t("sandbox.file_saved", path=saved_path),
+			parent=self.root,
 		)
 
 	def _on_save_audio_as(self) -> None:
@@ -189,10 +195,10 @@ class TranslationSandboxView:
 		initial_dir = suggested.parent if suggested.parent.is_dir() else Path.home()
 		selection = filedialog.asksaveasfilename(
 			parent=self.root,
-			title="Salvesta helifail",
+			title=t("sandbox.salvesta_helifail"),
 			defaultextension=".wav",
 			# Only one filter: "*.*" filters misbehave in the macOS save dialog.
-			filetypes=[("WAV helifail", "*.wav")],
+			filetypes=[(t("sandbox.wav_helifail"), "*.wav")],
 			initialdir=str(initial_dir),
 			initialfile=suggested.name,
 		)
@@ -204,7 +210,9 @@ class TranslationSandboxView:
 			self._show_error(exc.user_message)
 			return
 		messagebox.showinfo(
-			"Helifail salvestatud", f"Fail salvestatud:\n{saved_path}", parent=self.root
+			t("sandbox.helifail_salvestatud"),
+			t("sandbox.file_saved", path=saved_path),
+			parent=self.root,
 		)
 
 	def _handle_volume_change(self, volume: float) -> None:

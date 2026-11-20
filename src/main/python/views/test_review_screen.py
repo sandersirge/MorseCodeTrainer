@@ -5,6 +5,7 @@ from collections.abc import Callable
 import customtkinter as ctk
 
 from ..model.test_session import TestResponse, TestSummary
+from ..strings import t
 from .test_shared import prepare_backdrop
 from .theme import get_colors
 from .widgets import font_mono, make_button, make_card, make_font, make_frame, make_label
@@ -73,7 +74,10 @@ class TestReviewScreen:
 		header_box.pack(pady=(36, 18), padx=36, fill="x")
 		header_box.grid_columnconfigure(0, weight=1)
 		make_label(
-			header_box, "Läbivaatus", font=self._callout_font, text_color=colors.text_primary
+			header_box,
+			t("review.labivaatus"),
+			font=self._callout_font,
+			text_color=colors.text_primary,
 		).grid(row=0, column=0, pady=(20, 8))
 		self.review_meta_label = make_label(
 			header_box, "", font=self._counter_font, text_color=colors.text_primary
@@ -128,7 +132,7 @@ class TestReviewScreen:
 
 		self.review_prev_button = make_button(
 			action_row,
-			text="Liigu tagasi",
+			text=t("common.liigu_tagasi"),
 			command=self._review_previous,
 			font=self._button_font,
 			variant="muted",
@@ -139,7 +143,7 @@ class TestReviewScreen:
 
 		self.review_next_button = make_button(
 			action_row,
-			text="Liigu edasi",
+			text=t("common.liigu_edasi"),
 			command=self._review_next,
 			font=self._button_font,
 			variant="primary",
@@ -172,31 +176,24 @@ class TestReviewScreen:
 
 	def _update_review_display(self, response: TestResponse, position: int) -> None:
 		question_text = response.prompt
-		answer_text = f"Sinu vastus oli: {response.given or '—'}"
+		answer_text = t("review.your_answer", answer=response.given or "—")
 
 		points = response.score
 		correct_text = response.expected
 		if points == 0:
-			feedback = (
-				f"See oli vale. Said küsimuse eest {points} punkti.\n\n"
-				f"Õige vastus oli hoopis\n{correct_text}."
-			)
+			feedback = t("review.wrong", points=points, expected=correct_text)
 		elif points == 0.5:
-			feedback = (
-				f"See oli osaliselt õige. Said küsimuse eest {points} punkti.\n\n"
-				f"Õige vastus oli tegelikult\n{correct_text}."
-			)
+			feedback = t("review.partial", points=points, expected=correct_text)
 		else:
-			feedback = (
-				f"See oli täiesti õige. Said küsimuse eest {points} punkti.\n\n"
-				f"Õige vastus oli tõepoolest\n{correct_text}."
-			)
+			feedback = t("review.correct", points=points, expected=correct_text)
 
-		elapsed_text = f"Sul kulus küsimuse tõlkimiseks aega {round(response.elapsed, 2)} sekundit."
+		elapsed_text = t("review.time_spent", seconds=round(response.elapsed, 2))
 
 		total = len(self.summary.responses) if self.summary else 0
 		if self.review_meta_label:
-			self.review_meta_label.configure(text=f"Küsimus {position + 1}/{total}")
+			self.review_meta_label.configure(
+				text=t("common.question_counter", number=position + 1, total=total)
+			)
 		if self.review_question_label:
 			self.review_question_label.configure(text=question_text)
 		if self.review_answer_label:
@@ -213,9 +210,9 @@ class TestReviewScreen:
 			self.review_prev_button.configure(state=prev_state)
 		if self.review_next_button is not None:
 			label = (
-				"Liigu edasi"
+				t("common.liigu_edasi")
 				if total == 0 or self.review_index < total - 1
-				else "Lõpeta läbivaatus"
+				else t("review.lopeta_labivaatus")
 			)
 			self.review_next_button.configure(text=label)
 
@@ -237,7 +234,7 @@ class TestReviewScreen:
 		header_box.grid(row=1, column=0, padx=36, pady=(0, 16), sticky="ew")
 		make_label(
 			header_box,
-			"Läbivaatus lõpetatud",
+			t("review.labivaatus_lopetatud"),
 			font=self._callout_font,
 			text_color=colors.text_primary,
 		).pack(pady=20)
@@ -246,7 +243,7 @@ class TestReviewScreen:
 		info_box.grid(row=2, column=0, padx=36, pady=(0, 12), sticky="ew")
 		make_label(
 			info_box,
-			("Oled kõik küsimused üle vaadanud.\nNaase tulemuste lehele, et näha kokkuvõtet."),
+			(t("review.oled_koik_kusimused_ule")),
 			font=self._body_font,
 			text_color=colors.text_primary,
 			wraplength=500,
@@ -257,7 +254,7 @@ class TestReviewScreen:
 
 		make_button(
 			button_row,
-			text="Lõpeta läbivaatus",
+			text=t("review.lopeta_labivaatus"),
 			command=self._return_to_results,
 			font=self._button_font,
 			variant="primary",

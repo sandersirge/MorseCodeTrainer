@@ -230,6 +230,7 @@ The application follows an **MVC-style architecture**:
 - **Dynamic Audio**: presenters expose the Morse to play; `AudioPlayer` renders it in memory with the shared `AudioSettings` and caches the sounds
 - **Generated exercise data**: exercises are stored as text only; their Morse is produced by the translator, so prompts and answers can't disagree
 - **Cross-platform window**: `views/window.py` opens the window at a size that fits the screen and scales every widget and font to it (rescaling on resize). It also handles HiDPI on Linux, sets the icon per OS (`.ico` on Windows, PNG elsewhere), and starts in the OS light/dark mode
+- **One place for UI text**: every user-facing string lives in `strings.py` and is looked up with `t("key")` (or `t("key", value=...)` for messages with values). A test checks that every key used in the code exists and gets the right values. To add a language, add a catalog with the same keys and call `set_language()` at startup
 - **Immutable State**: Models expose frozen dataclass states to prevent accidental mutation
 - **Decoupled Audio**: pygame-ce integration is mocked in tests for CI stability
 - **Theme Tokens**: Centralized font/color constants in `views/theme.py`; all views call `get_colors()` at render time for correct light/dark theming

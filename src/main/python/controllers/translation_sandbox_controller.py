@@ -11,6 +11,7 @@ from ..exceptions import (
 )
 from ..services.audio_settings import AudioSettingsStore
 from ..services.morse_audio import save_wav
+from ..strings import t
 from ..utils import morse_translator
 
 _OUTPUT_PREFIX = "tõlge"
@@ -51,18 +52,18 @@ class TranslationSandboxPresenter:
 	"""Handles free-form translation and audio settings."""
 
 	_MODE_LABELS = {
-		"text_to_morse": "Tekst → Morse",
-		"morse_to_text": "Morse → tekst",
+		"text_to_morse": t("common.tekst_morse"),
+		"morse_to_text": t("common.morse_tekst"),
 	}
 
 	_INPUT_LABELS = {
-		"text_to_morse": "Tekst",
-		"morse_to_text": "Morse",
+		"text_to_morse": t("sandbox.tekst"),
+		"morse_to_text": t("sandbox.morse"),
 	}
 
 	_OUTPUT_LABELS = {
-		"text_to_morse": "Morse",
-		"morse_to_text": "Tekst",
+		"text_to_morse": t("sandbox.morse"),
+		"morse_to_text": t("sandbox.tekst"),
 	}
 
 	def __init__(
@@ -152,13 +153,13 @@ class TranslationSandboxPresenter:
 
 	def _save(self, destination: Path) -> Path:
 		if not self._morse_source:
-			raise NoAudioContentError(user_message="Ei ole helifaili salvestamiseks.")
+			raise NoAudioContentError(user_message=t("sandbox.ei_ole_helifaili_salvestamiseks"))
 		try:
 			return save_wav(destination, self._morse_source, self._store.settings)
 		except OSError as exc:
 			raise AudioSaveError(
 				"Failed to save audio file",
-				user_message="Helifaili ei õnnestunud salvestada.",
+				user_message=t("sandbox.helifaili_ei_onnestunud_salvestada"),
 				cause=exc,
 			) from exc
 

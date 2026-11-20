@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from difflib import SequenceMatcher
 
 from ..exceptions import MismatchedDataError, SessionInvalidStateError
+from ..strings import t
 from ..utils.morse_translator import split_morse_words
 
 _MORSE_ONLY = re.compile(r"[.\-\s/]+")
@@ -80,7 +81,7 @@ class TestSummary:
 
 	@property
 	def score_text(self) -> str:
-		return f"Vastasid {self.total_points} / {self.max_points} õigesti"
+		return t("grade.score", points=self.total_points, max_points=self.max_points)
 
 	@property
 	def answered_non_empty(self) -> int:
@@ -258,30 +259,30 @@ def _speed_from_times(entries: Sequence[float]) -> int:
 def _grade_and_feedback(percentage: float) -> tuple[str, str]:
 	if percentage <= 50:
 		return (
-			f"F (mitterahuldav) / {percentage}%",
-			"Punktisumma pole just kõige parem, aga arenguruumi on kõigil piisavalt.",
+			t("grade.f", percentage=percentage),
+			t("grade.punktisumma_pole_just_koige"),
 		)
 	if percentage <= 60:
 		return (
-			f"E (kasin) / {percentage}%",
-			"Punktisumma pole just kõige parem, aga arenguruumi on kõigil piisavalt.",
+			t("grade.e", percentage=percentage),
+			t("grade.punktisumma_pole_just_koige"),
 		)
 	if percentage <= 70:
 		return (
-			f"D (rahuldav) / {percentage}%",
-			"Hakkab juba vaikselt tulema.\nHarjuta veel mõned korrad ning kindlasti saad veelgi parema tulemuse.",
+			t("grade.d", percentage=percentage),
+			t("grade.hakkab_juba_vaikselt_tulema"),
 		)
 	if percentage <= 80:
 		return (
-			f"C (hea) / {percentage}%",
-			"Hakkab juba vaikselt tulema.\nHarjuta veel mõned korrad ning kindlasti saad veelgi parema tulemuse.",
+			t("grade.c", percentage=percentage),
+			t("grade.hakkab_juba_vaikselt_tulema"),
 		)
 	if percentage <= 90:
 		return (
-			f"B (väga hea) / {percentage}%",
-			"Päris hea. Tundub, et hakkad palju paremaks muutuma.",
+			t("grade.b", percentage=percentage),
+			t("grade.paris_hea_tundub_et"),
 		)
 	return (
-		f"A (suurepärane) / {percentage}%",
-		"Väga super.\nOled testi sooritanud headele punktidele ning võid ennast nimetada morsekoodi meistriks.",
+		t("grade.a", percentage=percentage),
+		t("grade.vaga_super_oled_testi"),
 	)

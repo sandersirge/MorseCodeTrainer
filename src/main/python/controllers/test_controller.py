@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from ..exceptions import SessionInvalidStateError, SessionNotInitializedError
 from ..model.test_session import TestResponse, TestSession, TestSummary
+from ..strings import t
 
 
 @dataclass(frozen=True)
@@ -99,7 +100,7 @@ class TestPresenter:
 			total=total,
 			progress_value=progress_value,
 			progress_step=progress_step,
-			progress_text=f"{progress_value:.1f}% läbitud",
+			progress_text=t("common.progress", percent=progress_value),
 			question_number=question_number,
 			existing_answer=self._session.current_answer(),
 			has_previous=self._session.has_previous_question(),
