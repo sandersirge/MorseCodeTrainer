@@ -10,6 +10,7 @@ from morsetrainer.exceptions.base import (
 	MorseTrainerError,
 	get_user_message,
 )
+from morsetrainer.strings import t
 
 
 class TestErrorCode:
@@ -106,12 +107,14 @@ class TestGetUserMessage:
 		err = MorseTrainerError("msg", code=ErrorCode.EMPTY_INPUT)
 		result = get_user_message(err)
 		assert len(result) > 0
-		assert "Tekkis viga:" not in result  # should NOT fall through to generic
+		assert not result.startswith(
+			t("error.generic", details="")
+		)  # should NOT fall through to generic
 
 	def test_generic_message_for_plain_exception(self) -> None:
 		err = ValueError("plain error")
-		assert get_user_message(err) == "Tekkis viga: plain error"
+		assert get_user_message(err) == t("error.generic", details="plain error")
 
 	def test_generic_message_for_runtime_error(self) -> None:
 		err = RuntimeError("boom")
-		assert get_user_message(err) == "Tekkis viga: boom"
+		assert get_user_message(err) == t("error.generic", details="boom")

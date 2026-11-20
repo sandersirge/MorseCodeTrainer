@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 from typing import Protocol
 
 import customtkinter as ctk
 
 from .controllers.flashcard_controller import FlashcardPresenter
+from .controllers.keyer_controller import KeyerPresenter
+from .controllers.koch_controller import KochPresenter
 from .controllers.test_controller import TestPresenter
 from .controllers.translation_controller import TranslationPresenter
 from .controllers.translation_sandbox_controller import TranslationSandboxPresenter
+from .model.training import word_drill
 from .navigator import Navigator
+from .resources.word_list import WORDS_ET
 from .services import (
 	AudioPlayer,
 	AudioSettingsStore,
@@ -18,10 +23,13 @@ from .services import (
 	create_translation_resources,
 	pygame,
 )
+from .services.progress_store import ProgressStore
 from .strings import t
 from .view_stack import ViewStack
 from .views.flashcard_view import FlashcardView
 from .views.home_view import HomeView, IntroductionView
+from .views.keyer_view import KeyerView
+from .views.koch_view import KochView
 from .views.test_view import TestView
 from .views.translation_sandbox_view import TranslationSandboxView
 from .views.translation_view import TranslationView
@@ -42,8 +50,14 @@ class Application:
 		translation_presenter: TranslationPresenter,
 		test_presenter: TestPresenter,
 		sandbox_presenter: TranslationSandboxPresenter,
+		koch_presenter: KochPresenter | None = None,
+		keyer_presenter: KeyerPresenter | None = None,
 	) -> None:
 		self.root = root
+		self.koch_presenter = koch_presenter
+		self.keyer_presenter = keyer_presenter
+		self.koch_view: KochView | None = None
+		self.keyer_view: KeyerView | None = None
 		self.audio = audio_player
 		self.flashcard_presenter = flashcard_presenter
 		self.translation_presenter = translation_presenter
@@ -73,8 +87,12 @@ class Application:
 		translation_view: TranslationView,
 		translation_sandbox_view: TranslationSandboxView,
 		test_view: TestView,
+		koch_view: KochView | None = None,
+		keyer_view: KeyerView | None = None,
 	) -> None:
 		self.view_stack = view_stack
+		self.koch_view = koch_view
+		self.keyer_view = keyer_view
 		self.home_view = home_view
 		self.introduction_view = introduction_view
 		self.flashcard_view = flashcard_view
@@ -160,6 +178,20 @@ class Application:
 			self.view_stack.show("sandbox")
 		self.translation_sandbox_view.show()
 
+	def show_koch(self) -> None:
+		if self.koch_view is None:
+			return
+		if self.view_stack is not None:
+			self.view_stack.show("koch")
+		self.koch_view.show()
+
+	def show_keyer(self) -> None:
+		if self.keyer_view is None:
+			return
+		if self.view_stack is not None:
+			self.view_stack.show("keyer")
+		self.keyer_view.show()
+
 	def show_test(self) -> None:
 		if self.test_view is None:
 			return
@@ -180,6 +212,8 @@ class AppDependencies:
 	translation_presenter: TranslationPresenter
 	test_presenter: TestPresenter
 	sandbox_presenter: TranslationSandboxPresenter
+	koch_presenter: KochPresenter | None = None
+	keyer_presenter: KeyerPresenter | None = None
 
 
 def build_application(
@@ -193,6 +227,8 @@ def build_application(
 		translation_presenter=deps.translation_presenter,
 		test_presenter=deps.test_presenter,
 		sandbox_presenter=deps.sandbox_presenter,
+		koch_presenter=deps.koch_presenter,
+		keyer_presenter=deps.keyer_presenter,
 	)
 
 	nav = Navigator(
@@ -204,6 +240,8 @@ def build_application(
 		test=app.show_test,
 		exit=app.quit,
 		reset_translation=app.reset_translation_state,
+		koch=app.show_koch,
+		keyer=app.show_keyer,
 	)
 
 	view_stack = ViewStack(deps.root)
@@ -218,7 +256,10 @@ def _build_dependencies(
 	root_creator = root_factory or ctk.CTk
 	root = root_creator()
 
-	settings_store = AudioSettingsStore()
+	# Saved progress also remembers the audio settings between runs.
+	progress = ProgressStore()
+	settings_store = AudioSettingsStore(progress.audio_settings())
+	settings_store.subscribe(progress.save_audio_settings)
 	audio_player = AudioPlayer(pygame_module or pygame, settings_store)
 	audio_player.start()
 
@@ -228,13 +269,19 @@ def _build_dependencies(
 	return AppDependencies(
 		root=root,
 		audio_player=audio_player,
-		flashcard_presenter=FlashcardPresenter(sessions=flashcard_resources.sessions),
+		flashcard_presenter=FlashcardPresenter(
+			sessions=flashcard_resources.sessions, progress=progress
+		),
 		translation_presenter=TranslationPresenter(
 			morse_session=translation_resources.morse_to_text,
 			text_session=translation_resources.text_to_morse,
+			drill_factory=lambda: word_drill(WORDS_ET, progress.weakness, random.Random()),
+			progress=progress,
 		),
 		test_presenter=TestPresenter(create_test_session()),
 		sandbox_presenter=TranslationSandboxPresenter(settings_store),
+		koch_presenter=KochPresenter(progress),
+		keyer_presenter=KeyerPresenter(settings_store, WORDS_ET, progress),
 	)
 
 
@@ -265,6 +312,22 @@ def _build_views(nav: Navigator, deps: AppDependencies, view_stack: ViewStack) -
 			audio_player=audio,
 			presenter=deps.test_presenter,
 		),
+		"koch_view": KochView(
+			root=view_stack.register("koch"),
+			nav=nav,
+			audio_player=audio,
+			presenter=deps.koch_presenter,
+		)
+		if deps.koch_presenter
+		else None,
+		"keyer_view": KeyerView(
+			root=view_stack.register("keyer"),
+			nav=nav,
+			audio_player=audio,
+			presenter=deps.keyer_presenter,
+		)
+		if deps.keyer_presenter
+		else None,
 		"home_view": HomeView(root=view_stack.register("home"), nav=nav),
 		"introduction_view": IntroductionView(root=view_stack.register("introduction"), nav=nav),
 	}

@@ -22,3 +22,5 @@ class Navigator:
 	test: Callable[[], None]
 	exit: Callable[[], None]
 	reset_translation: Callable[[], None]
+	koch: Callable[[], None] = lambda: None
+	keyer: Callable[[], None] = lambda: None

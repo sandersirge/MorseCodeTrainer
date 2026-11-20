@@ -8,10 +8,11 @@ from collections import OrderedDict
 from typing import Any
 
 from .audio_settings import AudioSettings, AudioSettingsStore
-from .morse_audio import DEFAULT_SAMPLE_RATE, render_wav_bytes
+from .morse_audio import DEFAULT_SAMPLE_RATE, render_tone_loop_wav, render_wav_bytes
 
 _log = logging.getLogger(__name__)
 _CACHE_SIZE = 64
+_TONE_FADE_MS = 5
 
 
 class AudioPlayer:
@@ -30,6 +31,8 @@ class AudioPlayer:
 		self._sample_rate = DEFAULT_SAMPLE_RATE
 		self._channel: Any = None
 		self._sounds: OrderedDict[tuple[str, AudioSettings], Any] = OrderedDict()
+		self._tone: Any = None
+		self._tone_settings: AudioSettings | None = None
 
 	@property
 	def available(self) -> bool:
@@ -66,6 +69,27 @@ class AudioPlayer:
 		except Exception:
 			_log.warning("Could not play Morse audio", exc_info=True)
 			return False
+
+	def start_tone(self) -> None:
+		"""Start the keyer side tone (loops until stop_tone)."""
+		if not self._available:
+			return
+		try:
+			settings = self._store.settings
+			if self._tone is None or self._tone_settings != settings:
+				wav = render_tone_loop_wav(settings, self._sample_rate)
+				self._tone = self._pygame.mixer.Sound(file=io.BytesIO(wav))
+				self._tone_settings = settings
+			self._tone.play(loops=-1, fade_ms=_TONE_FADE_MS)
+		except Exception:
+			_log.debug("Could not start side tone", exc_info=True)
+
+	def stop_tone(self) -> None:
+		if self._tone is not None:
+			try:
+				self._tone.fadeout(_TONE_FADE_MS)
+			except Exception:
+				_log.debug("Could not stop side tone", exc_info=True)
 
 	def stop(self) -> None:
 		if not self._available:

@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
-from ..exceptions import SessionNotInitializedError
+from ..exceptions import InvalidModeError, MorseTrainerError, SessionNotInitializedError
+from ..model.training import score_copy
 from ..model.translation_session import TranslationSession
+from ..services.progress_store import ProgressStore
 from ..strings import t
-from ..utils.morse_translator import normalize_morse
+from ..utils.morse_translator import (
+	convert_morse_to_text,
+	convert_text_to_morse,
+	format_morse_for_display,
+	normalize_morse,
+)
 
 
 @dataclass(frozen=True)
@@ -37,27 +45,64 @@ class TranslationPresenter:
 		"morse_to_text": t("common.morse_tekst"),
 	}
 
+	SOURCES = ("fixed", "random")
+
 	def __init__(
 		self,
 		morse_session: TranslationSession,
 		text_session: TranslationSession,
+		*,
+		drill_factory: Callable[[], list[str]] | None = None,
+		progress: ProgressStore | None = None,
 	) -> None:
-		self._sessions = {
+		"""*drill_factory* returns fresh texts for the "random" source.
+
+		With a *progress* store, the first answer to each item is scored per
+		character so weak characters show up more in later drills.
+		"""
+		self._fixed_sessions = {
 			"morse_to_text": morse_session,
 			"text_to_morse": text_session,
 		}
+		self._sessions = dict(self._fixed_sessions)
+		self._drill_factory = drill_factory
+		self._progress = progress
+		self._source = "fixed"
+		self._scored: set[int] = set()
 		self._active_mode: str | None = None
+
+	@property
+	def source(self) -> str:
+		return self._source
+
+	def set_source(self, source: str) -> None:
+		""" "fixed" = the built-in sentences, "random" = a new word drill each run."""
+		if source not in self.SOURCES:
+			raise InvalidModeError(source)
+		if source == "random" and self._drill_factory is None:
+			return
+		self._source = source
 
 	def reset(self) -> None:
 		"""Reset sessions so a fresh training run can begin."""
 
-		for session in self._sessions.values():
+		for session in self._fixed_sessions.values():
 			session.reset()
+		self._sessions = dict(self._fixed_sessions)
+		self._scored.clear()
 		self._active_mode = None
 
 	def start(self, mode: str) -> TranslationState | None:
 		"""Prepare state for the requested mode, or None if data missing."""
 
+		if self._source == "random" and self._drill_factory is not None:
+			texts = self._drill_factory()
+			morse = [format_morse_for_display(convert_text_to_morse(text)) for text in texts]
+			self._sessions = {
+				"morse_to_text": TranslationSession(prompts=morse, answers=list(texts)),
+				"text_to_morse": TranslationSession(prompts=list(texts), answers=morse),
+			}
+			self._scored.clear()
 		session = self._sessions[mode]
 		if session.total == 0:
 			return None
@@ -112,7 +157,24 @@ class TranslationPresenter:
 				correct.upper().split()
 			)
 
+		self._record_first_attempt(session, given)
 		return is_correct, correct
+
+	def _record_first_attempt(self, session: TranslationSession, given: str) -> None:
+		"""Count each character of the expected text as right/wrong (once per item)."""
+		if self._progress is None or not given or session.index in self._scored:
+			return
+		self._scored.add(session.index)
+		if self._active_mode == "text_to_morse":
+			expected_text = session.current_prompt()
+			try:
+				given_text = convert_morse_to_text(given)
+			except MorseTrainerError:
+				given_text = ""
+		else:
+			expected_text = session.current_answer()
+			given_text = given
+		self._progress.record_many(score_copy(expected_text, given_text).per_char)
 
 	def audio_morse(self) -> str | None:
 		"""The Morse to play for the active prompt (only when the prompt is Morse)."""

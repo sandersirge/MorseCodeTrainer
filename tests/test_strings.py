@@ -51,7 +51,7 @@ class TestCatalog:
 
 class TestLookup:
 	def test_plain_lookup(self):
-		assert t("common.tagasi_avalehele") == "Tagasi avalehele"
+		assert t("common.tagasi_avalehele") == ET["common.tagasi_avalehele"]
 
 	def test_formatting(self):
 		assert t("common.progress", percent=12.345) == "12.3% läbitud"
@@ -65,6 +65,6 @@ class TestLookup:
 		try:
 			set_language({"common.tagasi": "Back"})
 			assert t("common.tagasi") == "Back"
-			assert t("common.tagasi_avalehele") == "Tagasi avalehele"  # falls back
+			assert t("common.tagasi_avalehele") == ET["common.tagasi_avalehele"]  # falls back
 		finally:
 			set_language(strings.ET)

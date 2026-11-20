@@ -2,9 +2,9 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-705%20passing-brightgreen.svg)](#-testing)
+[![Tests](https://img.shields.io/badge/tests-817%20passing-brightgreen.svg)](#-testing)
 
-An interactive Morse code learning application built with Python and CustomTkinter. Learn Morse code through guided translations, flashcard drills, free-form practice, and timed assessments.
+An interactive Morse code learning application built with Python and CustomTkinter. Learn Morse code with flashcards, Koch-method listening lessons, translation drills, a straight-key practice mode, free-form translation and timed tests. The UI is in Estonian.
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
 ![CustomTkinter](https://img.shields.io/badge/CustomTkinter-UI-blue)
@@ -14,11 +14,31 @@ An interactive Morse code learning application built with Python and CustomTkint
 
 ### 🔤 Translation Training
 
-Guided translation sessions with progress tracking, hints, and audio playback. Practice converting between plain text and Morse code with immediate feedback.
+Translate in both directions with hints, audio and immediate feedback. Choose the built-in sentences or
+a fresh random word drill every run.
 
 ### 🃏 Flashcard Drills
 
-Category-based flashcard decks covering letters, numbers, and symbols. Audio pronunciations help reinforce learning with progress indicators.
+Category-based flashcard decks covering letters, numbers, and symbols, with audio. After flipping a card,
+mark whether you knew it; characters you miss come up earlier and more often in later runs.
+
+### 👂 Koch Listening Lessons
+
+The Koch method: hear random 5-character groups made from the characters unlocked so far and type what
+you heard. Start with two characters (K, M); scoring 90 % or more unlocks the next one. The newest
+character is played more often. Levels can also be changed by hand.
+
+### 🔑 Keyer Practice
+
+Send Morse by holding the space bar (or the on-screen pad) like a straight key, with a side tone.
+The app decodes your timing live, shows your estimated speed and checks it against a target word.
+
+### 📈 Saved Progress
+
+Per-character results (from flashcards, Koch lessons, translation drills and keying), the Koch level and
+the audio settings are saved in the user data folder (`%APPDATA%`, `~/Library/Application Support` or
+`~/.local/share`, under `MorseCodeTrainer/progress.json`). Random translation drills pick words that
+contain your weakest characters.
 
 ### 🎮 Sandbox Mode
 
@@ -65,8 +85,8 @@ or written to the temp folder.
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/sandersirge/MorseCodeProgram.git
-   cd MorseCodeProgram
+   git clone https://github.com/sandersirge/MorseCodeTrainer.git
+   cd MorseCodeTrainer
    ```
 
 2. **Create and activate virtual environment**
@@ -103,28 +123,34 @@ or written to the temp folder.
 python run.py
 ```
 
+Or install it as a package and use the `morse-trainer` command (or `python -m morsetrainer`):
+
+```bash
+pip install -e .
+morse-trainer
+```
+
 ## 🧪 Testing
 
-The project includes a comprehensive test suite with **705 tests** covering models, controllers, services, utilities, resources, and exceptions.
+The project includes **817 tests** covering models, controllers, services, utilities, resources, exceptions and the UI text catalog. Run them from the repository root.
 
 ### Run Tests
 
 ```bash
-cd src
 pytest
 ```
 
 ### Run Only Smoke Tests (fast, < 1 s)
 
 ```bash
-cd src
 pytest -m smoke -q
 ```
 
 ### Run with Coverage Report
 
 ```bash
-pytest --cov=main.python --cov-report=html
+pip install pytest-cov
+pytest --cov=morsetrainer --cov-report=html
 ```
 
 ### HTML Test Report
@@ -148,69 +174,30 @@ After running tests, an HTML report is generated at `reports/report.html`.
 ## 📁 Project Structure
 
 ```text
-MorseCodeProgram/
-├── run.py                    # Application entry point
+MorseCodeTrainer/
+├── run.py                    # Start from a source checkout (also used by PyInstaller)
 ├── morsetrainer.spec         # PyInstaller build spec
-├── pyproject.toml            # Project metadata and tool config
-├── LICENSE.md                # MIT License
-├── README.md                 # This file
+├── pyproject.toml            # Package metadata, ruff and pytest config
 ├── DEVPLAN.md                # Development roadmap
-│
-├── docker/                   # Container configuration
-│   ├── Dockerfile
-│   └── docker-compose.yml
-│
-├── requirements/             # Dependency files
-│   ├── requirements.txt      # Runtime dependencies
-│   └── requirements-dev.txt  # Development dependencies
-│
-├── reports/                  # Test report output (generated)
-│
-├── resources/
-│   └── icons/                # Application icons (ICO, ICNS, PNG)
-│
+├── docker/                   # Dockerfile and docker-compose.yml
+├── requirements/             # requirements.txt (runtime), requirements-dev.txt
+├── resources/icons/          # Application icons (ICO, ICNS, PNG)
+├── reports/                  # HTML test report (generated)
 ├── src/
-│   ├── main/
-│   │   ├── python/           # Application source code
-│   │   │   ├── application.py    # App wiring & DI bootstrap
-│   │   │   ├── main.py           # Entry point
-│   │   │   ├── navigator.py      # Frozen routing dataclass
-│   │   │   ├── view_stack.py     # Frame-swap navigation manager
-│   │   │   ├── controllers/  # MVC presenters
-│   │   │   │   ├── protocols.py      # Presenter Protocol types
-│   │   │   │   ├── flashcard_controller.py
-│   │   │   │   ├── translation_controller.py
-│   │   │   │   ├── test_controller.py
-│   │   │   │   └── translation_sandbox_controller.py
-│   │   │   ├── exceptions/   # Typed exception hierarchy
-│   │   │   │   ├── base.py       # ErrorCode, MorseTrainerError
-│   │   │   │   ├── session.py
-│   │   │   │   ├── translation.py
-│   │   │   │   ├── audio.py
-│   │   │   │   └── validation.py
-│   │   │   ├── model/        # Domain entities & state
-│   │   │   ├── resources/    # Constants & data tables
-│   │   │   │   ├── morse_data.py     # Symbol tables & lookup maps
-│   │   │   │   ├── exercise_data.py  # Exercise texts (Morse is generated)
-│   │   │   │   └── constants.py      # Re-export shim
-│   │   │   ├── services/     # Audio, data providers
-│   │   │   │   ├── morse_audio.py    # Timing + in-memory WAV synthesis
-│   │   │   │   ├── audio_player.py   # Playback, cache, no-device fallback
-│   │   │   │   ├── audio_provider.py # pygame import
-│   │   │   │   ├── audio_settings.py # Shared settings (WPM, pitch, volume)
-│   │   │   │   └── data_provider.py  # Session factories
-│   │   │   ├── utils/        # Morse translator
-│   │   │   └── views/        # CustomTkinter UI
-│   │   │       ├── theme.py          # Colours, OS font detection
-│   │   │       ├── window.py         # Window size, UI scaling, icon
-│   │   │       ├── widgets.py        # Shared UI components
-│   │   │       └── ...               # Screen views
-│   │
-│   └── tests/                # pytest test suite
-│       ├── conftest.py       # Shared fixtures
-│       ├── exceptions/       # Exception hierarchy tests
-│       ├── test_smoke.py     # Bootstrap sanity checks
-│       └── ...
+│   └── morsetrainer/         # The application package
+│       ├── application.py    # App wiring & dependency setup
+│       ├── main.py           # Entry point (morse-trainer / python -m morsetrainer)
+│       ├── strings.py        # All UI text (Estonian), looked up with t("key")
+│       ├── navigator.py      # Routing callbacks
+│       ├── view_stack.py     # Frame-swap navigation
+│       ├── controllers/      # Presenters: flashcards, translation, test, sandbox, Koch, keyer
+│       ├── exceptions/       # Typed exceptions with user messages
+│       ├── model/            # Sessions, scoring, Koch/word-drill logic, keyer decoder
+│       ├── resources/        # Morse tables, exercise texts, word list
+│       ├── services/         # Audio synthesis/playback, settings, saved progress, data
+│       ├── utils/            # Morse translator
+│       └── views/            # CustomTkinter screens, theme, window scaling
+└── tests/                    # pytest suite (mirrors the package layout)
 ```
 
 ## 🏗️ Architecture
@@ -247,7 +234,7 @@ The application follows an **MVC-style architecture**:
 
 ### Adding Tests
 
-Tests use pytest with fixtures defined in `src/tests/conftest.py`. Audio playback is automatically mocked.
+Tests use pytest with fixtures defined in `tests/conftest.py`. Audio playback is automatically mocked.
 
 ```python
 # Example test
@@ -258,7 +245,7 @@ def test_translation_session_advances(sample_translation_items):
 
 ### Theme Customization
 
-Edit `src/main/python/views/theme.py` to modify:
+Edit `src/morsetrainer/views/theme.py` to modify:
 
 - Font families and sizes
 - Color palette

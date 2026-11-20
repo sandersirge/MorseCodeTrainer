@@ -35,6 +35,15 @@ class FlashcardSession:
 			raise IndexError("FlashcardSession has no cards")
 		return self._cards[self.index]
 
+	@property
+	def cards(self) -> list[Flashcard]:
+		return list(self._cards)
+
+	def set_order(self, cards: Sequence[Flashcard]) -> None:
+		"""Replace the deck order (same cards, e.g. weak ones first) and restart."""
+		self._cards = list(cards)
+		self.index = 0
+
 	def add_cards(self, cards: Iterable[tuple[str, str]] | Iterable[Flashcard]) -> None:
 		for card in cards:
 			self._cards.append(card if isinstance(card, Flashcard) else Flashcard(*card))

@@ -11,6 +11,7 @@ from morsetrainer.controllers.translation_sandbox_controller import (
 )
 from morsetrainer.exceptions import InvalidModeError, NoAudioContentError
 from morsetrainer.services.audio_settings import AudioSettingsStore
+from morsetrainer.strings import t
 
 
 @pytest.fixture
@@ -124,7 +125,7 @@ class TestTranslationSandboxPresenterTranslate:
 	def test_translate_invalid_character_sets_error(self, presenter):
 		state = presenter.translate("©")
 		assert state.error_message is not None
-		assert "pole toetatud" in state.error_message
+		assert state.error_message == t("error.unsupported_character", char="©")
 
 	def test_translate_stores_input(self, presenter):
 		presenter.translate("HELLO")

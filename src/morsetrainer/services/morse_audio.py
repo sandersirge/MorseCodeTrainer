@@ -117,10 +117,31 @@ def save_wav(path: Path, morse_code: str, settings: AudioSettings) -> Path:
 	return target
 
 
+def render_tone_loop_wav(settings: AudioSettings, sample_rate: int = DEFAULT_SAMPLE_RATE) -> bytes:
+	"""A short steady tone that loops seamlessly (whole number of cycles).
+
+	Used as the keyer side tone; fades are applied by the player when it
+	starts and stops the loop.
+	"""
+	cycles = max(1, round(settings.frequency_hz * 0.5))
+	count = round(cycles * sample_rate / settings.frequency_hz)
+	amplitude = settings.volume * 32767
+	step = 2 * math.pi * cycles / count
+	samples = array("h", (int(amplitude * math.sin(step * i)) for i in range(count)))
+	buffer = io.BytesIO()
+	with wave.open(buffer, "wb") as wav_file:
+		wav_file.setnchannels(1)
+		wav_file.setsampwidth(2)
+		wav_file.setframerate(sample_rate)
+		wav_file.writeframes(samples.tobytes())
+	return buffer.getvalue()
+
+
 __all__ = [
 	"DEFAULT_SAMPLE_RATE",
 	"morse_events",
 	"render_samples",
+	"render_tone_loop_wav",
 	"render_wav_bytes",
 	"save_wav",
 	"timing_seconds",

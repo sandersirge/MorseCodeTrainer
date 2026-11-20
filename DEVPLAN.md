@@ -2,20 +2,31 @@
 
 ## Current Status Snapshot
 
-- UI modernisation complete across CustomTkinter views with stable audio integration
-- Translation sandbox now provides segmented direction control, placeholders, and refreshed audio widgets
-- Timed test workflow supports backward navigation, persistent answers, and pause exits through controller-model coordination
+- **Training modes**: flashcards with "knew it / didn't" rating and weak-first order, Koch listening
+  lessons (90 % unlocks the next character), translation drills from fixed sentences or random words
+  that favour weak characters, keyer practice (space bar as a straight key, live decoding), timed test,
+  sandbox
+- **Saved progress**: per-character results, Koch level and audio settings in
+  `<user data dir>/MorseCodeTrainer/progress.json` (`services/progress_store.py`)
+- **Audio**: synthesized in memory (`services/morse_audio.py`, `services/audio_player.py`), one shared
+  `AudioSettingsStore` (WPM + Farnsworth, pitch, volume), click-free tones, keyer side tone, works
+  without a sound device
+- **Cross-platform UI**: window fits the screen and rescales on resize (`views/window.py`), installed
+  fonts per OS, OS light/dark mode, per-OS icons
+- **UI text**: every string in `strings.py` (`t("key")`); concise Estonian wording; English is planned
+  (see "Planned: Multi-language support")
 - Controllers hold all domain logic, models expose immutable state, and views stay presentation-only
-- **Pytest coverage complete**: 705 tests across models, controllers, services, utils, resources, exceptions, application wiring, views/theme, and regressions
-- **Project restructured**: `src/main/python/` for application code, `src/tests/` for test suite, `src/main/resources/` for assets
-- **CI/CD configured**: GitHub Actions workflow runs tests on Python 3.10-3.12 across Ubuntu, Windows, macOS
+- **Tests**: 817 pytest tests, run from the repository root (`pytest`)
+- **Project layout**: standard src layout, package `src/morsetrainer/`, tests in `tests/`, single
+  `run.py` for source checkouts, `morse-trainer` entry point when installed
+- **CI/CD**: lint (whole repo) → tests (Python 3.10–3.14 on Linux, 3.10/3.14 on Windows and macOS) →
+  PyInstaller builds
 - **Docker support added**: Dockerfile and docker-compose.yml for containerized testing and development
 - **Packaging configured**: PyInstaller for standalone executables (Windows, macOS, Linux) with GitHub Actions release automation
 - **Application icons added**: Full icon set generated (ICO, ICNS, PNG sizes) for all platforms
 - **Accessibility improvements**: Light/dark mode toggle, keyboard navigation helpers, focus indicators, and entry field placeholders
 - **Error handling standardised**: Typed exception hierarchy with Estonian user messages; `get_user_message()` helper for views
 - **Dynamic theming**: All views now use `get_colors()` for theme-aware rendering; light/dark mode applies across entire app
-- **Dynamic audio**: `AudioCache` service synthesizes morse audio on demand with static-file fallback for learning; translation exercises (morse→text) use dynamic-only audio
 - **Ruff linting enforced**: Blocking ruff check and format in CI; tab-indented code style with UP/I/F/E/W rules
 - **Briefcase config removed**: Deprecated BeeWare/Toga sections cleaned from `pyproject.toml`
 
@@ -47,18 +58,32 @@
 - [x] Add Hypothesis property-based tests for encode→decode round-trip in `test_morse_translator_property.py`
 - [x] Add smoke test suite (`tests/test_smoke.py`, `pytest.mark.smoke`) — 16 tests, completes in < 0.5 s
 
-### 10. ~~Introduce `AudioCache` dynamic audio service~~ ✅ DONE
+### 10. ~~Introduce `AudioCache` dynamic audio service~~ ✅ DONE (since replaced)
 
-Created `services/audio_cache.py` with `AudioCache` class wrapping `synthesize_morse_audio()`. The cache stores generated temp `.wav` files keyed by prompt. `resolve()` provides dynamic-only synthesis; `resolve_with_fallback()` tries dynamic first, then falls back to the static `.wav` file map. `cleanup()` deletes all cached temp files (registered via `atexit`). Removed dead `PHRASE_AUDIO_MAP`, `WORD_AUDIO_ENTRIES`, and `SENTENCE_AUDIO_ENTRIES` from `audio_data.py`. Deleted empty `exercises/` and `quiz/` resource directories. `FlashcardPresenter` uses `resolve_with_fallback(card.back, card.front)` for learning mode. `TranslationPresenter` uses `resolve(prompt, prompt)` for morse→text exercises only.
+`AudioCache` and its temp `.wav` files were later replaced by in-memory synthesis in
+`services/audio_player.py`; the static `.wav` fallback (which pointed at the wrong folder) and the
+58 bundled `.wav` files were removed.
+
+### 11. ~~Review fixes, cross-platform UI, training features~~ ✅ DONE
+
+- Exercise Morse generated from text; alignment-based test scoring; Õ/Ž; uppercase decoding
+- Shared WPM/Farnsworth audio settings, click-free tones, no-device fallback, saving to Documents
+- Window fitting/rescaling, per-OS fonts and icons, Linux HiDPI and emoji safety
+- All UI text in `strings.py`; src layout; trimmed dependencies; faster CI ordering
+- Saved progress, weak-first flashcards, Koch lessons, random word drills, keyer practice
 
 ## Known Limitations
 
-- Timed test mode has no audio (by design — tests measure text recall)
-- Text→morse translation exercises have no audio (prompt is plain text, not morse)
+- Timed test mode has no audio (questions are shown as text or Morse only)
+- Text→morse translation exercises have no audio (the prompt is plain text)
+- Õ is sent with Ö's code (`---.`) and decodes as Ö; Ž uses `--..-` (the Ż code)
+- Verified on Windows; macOS and Linux are covered by CI tests and builds, not by manual runs
 
 ## Near-Term Priorities
 
-- Expose speed/pitch/volume controls for dynamic audio in learning and exercises UI
+- Listening questions in the timed test ("hear it, type it")
+- A progress screen: per-character accuracy, weakest characters, reset button
+- Multi-language support (see below)
 
 ## Architecture & Modularity Improvements
 

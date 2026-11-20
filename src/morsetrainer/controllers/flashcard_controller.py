@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import random
 from collections.abc import Mapping
 from dataclasses import dataclass
 
 from ..exceptions import SessionNotInitializedError
-from ..model.flashcard_session import FlashcardSession
+from ..model.flashcard_session import Flashcard, FlashcardSession
+from ..model.training import weighted_order
+from ..services.progress_store import ProgressStore
 from ..strings import t
 
 
@@ -25,16 +28,30 @@ class FlashcardState:
 	has_previous: bool
 	next_label: str
 	show_audio_button: bool
+	can_rate: bool = False
+
+
+def card_character(card: Flashcard) -> str:
+	"""The character a card teaches ("A a" -> "A", "5" -> "5")."""
+	return card.front.split()[0] if card.front.split() else card.front
 
 
 class FlashcardPresenter:
-	"""Coordinates flashcard session state for the UI."""
+	"""Coordinates flashcard session state for the UI.
+
+	With a progress store, every run starts with the weakest characters more
+	likely to come first, and the user can rate each card ("knew it" or not).
+	"""
 
 	def __init__(
 		self,
 		sessions: Mapping[str, FlashcardSession],
+		progress: ProgressStore | None = None,
+		rng: random.Random | None = None,
 	) -> None:
 		self._sessions = {name: session for name, session in sessions.items()}
+		self._progress = progress
+		self._rng = rng or random.Random()
 		self._active_category: str | None = None
 		self._showing_back = False
 
@@ -48,10 +65,26 @@ class FlashcardPresenter:
 		session = self._sessions.get(category)
 		if session is None or session.is_empty():
 			return None
+		if self._progress is not None:
+			progress = self._progress
+			session.set_order(
+				weighted_order(
+					session.cards,
+					lambda card: 0.2 + progress.weakness(card_character(card)),
+					self._rng,
+				)
+			)
 		session.reset()
 		self._active_category = category
 		self._showing_back = False
 		return self._build_state(session)
+
+	def rate(self, knew_it: bool) -> FlashcardState | None:
+		"""Record whether the user knew the current card, then go to the next one."""
+		session = self._require_session()
+		if self._progress is not None:
+			self._progress.record(card_character(session.current()), knew_it)
+		return self.next()
 
 	def toggle(self) -> FlashcardState:
 		session = self._require_session()
@@ -96,6 +129,7 @@ class FlashcardPresenter:
 			has_previous=not is_first,
 			next_label=t("common.lopeta_treening") if is_last else t("common.liigu_edasi"),
 			show_audio_button=self._showing_back,
+			can_rate=self._showing_back and self._progress is not None,
 		)
 
 	def _require_session(self) -> FlashcardSession:

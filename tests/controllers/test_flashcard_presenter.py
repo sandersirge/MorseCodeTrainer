@@ -7,6 +7,7 @@ import pytest
 from morsetrainer.controllers.flashcard_controller import FlashcardPresenter, FlashcardState
 from morsetrainer.exceptions import SessionNotInitializedError
 from morsetrainer.model.flashcard_session import Flashcard, FlashcardSession
+from morsetrainer.strings import t
 
 
 @pytest.fixture
@@ -201,10 +202,10 @@ class TestFlashcardState:
 		presenter.start("letters")
 		mock_sessions["letters"].is_last.return_value = True
 		state = presenter.current_state()
-		assert state.next_label == "Lõpeta treening"
+		assert state.next_label == t("common.lopeta_treening")
 
 	def test_next_label_not_on_last(self, presenter, mock_sessions):
 		presenter.start("letters")
 		mock_sessions["letters"].is_last.return_value = False
 		state = presenter.current_state()
-		assert state.next_label == "Liigu edasi"
+		assert state.next_label == t("common.liigu_edasi")

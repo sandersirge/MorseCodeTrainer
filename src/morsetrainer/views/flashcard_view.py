@@ -49,6 +49,7 @@ class FlashcardView:
 		self.prev_button: ctk.CTkButton | None = None
 		self.next_button: ctk.CTkButton | None = None
 		self.audio_button: ctk.CTkButton | None = None
+		self._rate_frame: ctk.CTkFrame | None = None
 		self._peak_progress_value = 0.0
 		self._title_font = make_font(size=34, weight="bold")
 		self._body_font = make_font(size=18, weight="bold")
@@ -76,6 +77,7 @@ class FlashcardView:
 		self.prev_button = None
 		self.next_button = None
 		self.audio_button = None
+		self._rate_frame = None
 		self._peak_progress_value = 0.0
 		self.audio.stop()
 
@@ -296,6 +298,28 @@ class FlashcardView:
 		)
 		self.audio_button.grid(row=0, column=3, padx=12, pady=10)
 
+		# Self-rating (shown on the back side): feeds the weak-first card order.
+		self._rate_frame = make_frame(self._controls, fg_color="transparent")
+		self._rate_frame.grid(row=1, column=0, columnspan=4, pady=(4, 0))
+		make_button(
+			self._rate_frame,
+			text=t("flashcards.knew_it"),
+			command=lambda: self.rate_card(True),
+			font=self._button_font,
+			variant="positive",
+			width=180,
+			height=40,
+		).grid(row=0, column=0, padx=12)
+		make_button(
+			self._rate_frame,
+			text=t("flashcards.did_not_know"),
+			command=lambda: self.rate_card(False),
+			font=self._button_font,
+			variant="danger",
+			width=180,
+			height=40,
+		).grid(row=0, column=1, padx=12)
+
 		self._back_button = make_button(
 			self._card,
 			text=t("common.tagasi_valikute_juurde"),
@@ -333,6 +357,12 @@ class FlashcardView:
 
 		if self.next_button:
 			self.next_button.configure(text=state.next_label)
+
+		if self._rate_frame is not None:
+			if state.can_rate:
+				self._rate_frame.grid()
+			else:
+				self._rate_frame.grid_remove()
 
 		if self.audio_button:
 			if state.show_audio_button and self.audio.available:
@@ -383,6 +413,16 @@ class FlashcardView:
 		if not self.state:
 			return
 		self.state = self.presenter.previous()
+		self._render_state()
+
+	def rate_card(self, knew_it: bool) -> None:
+		if not self.state:
+			return
+		next_state = self.presenter.rate(knew_it)
+		if next_state is None:
+			self.flashcard_finish()
+			return
+		self.state = next_state
 		self._render_state()
 
 	def next_card(self) -> None:

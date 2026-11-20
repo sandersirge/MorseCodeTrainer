@@ -120,15 +120,19 @@ class HomeView:
 		self._buttons_frame = make_frame(self._hero, fg_color="transparent")
 		self._buttons_frame.pack(pady=(0, 24))
 
+		# Two columns: learning on the left, practice and tools on the right.
 		menu_items = [
 			(t("home.tutvustus"), self.nav.introduction),
 			(t("home.ope"), self.nav.flashcards),
+			(t("home.koch"), self.nav.koch),
 			(t("home.harjutused"), self.nav.translation),
 			(t("home.test"), self.nav.test),
+			(t("home.keyer"), self.nav.keyer),
 			(t("home.sandbox"), self.nav.translation_sandbox),
 		]
 
-		for label, callback in menu_items:
+		rows = (len(menu_items) + 1) // 2
+		for index, (label, callback) in enumerate(menu_items):
 			btn = make_button(
 				self._buttons_frame,
 				text=label,
@@ -139,7 +143,7 @@ class HomeView:
 				height=48,
 				corner_radius=14,
 			)
-			btn.pack(pady=10)
+			btn.grid(row=index % rows, column=index // rows, padx=12, pady=8)
 			add_focus_highlight(btn)
 			self._nav_buttons.append(btn)
 

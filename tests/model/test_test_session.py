@@ -10,6 +10,7 @@ from morsetrainer.model.test_session import (
 	_grade_and_feedback,
 	_speed_from_times,
 )
+from morsetrainer.strings import t
 
 
 class TestTestSessionInit:
@@ -221,7 +222,7 @@ class TestTestSummaryProperties:
 			word_speed=30,
 			sentence_speed=20,
 		)
-		assert summary.score_text == "Vastasid 5.0 / 10 õigesti"
+		assert summary.score_text == t("grade.score", points=5.0, max_points=10)
 
 	def test_answered_non_empty_counts_correctly(self):
 		responses = [

@@ -132,7 +132,28 @@ class TranslationView:
 			font=self._section_font,
 			text_color=colors.text_primary,
 			wraplength=640,
-		).pack(pady=(0, 40))
+		).pack(pady=(0, 20))
+
+		# Exercise source: the built-in sentences or a new random word drill
+		sources = {
+			t("translation.source_fixed"): "fixed",
+			t("translation.source_random"): "random",
+		}
+		source_toggle = ctk.CTkSegmentedButton(
+			card,
+			values=list(sources),
+			command=lambda label: self.presenter.set_source(sources[label]),
+			font=self._button_font,
+		)
+		source_toggle.set(next(k for k, v in sources.items() if v == self.presenter.source))
+		source_toggle.pack(pady=(0, 6))
+		make_label(
+			card,
+			t("translation.source_hint"),
+			font=self._hint_font,
+			text_color=colors.text_muted,
+			wraplength=640,
+		).pack(pady=(0, 24))
 
 		buttons = make_frame(card, fg_color="transparent")
 		buttons.pack(expand=True)
