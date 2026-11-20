@@ -202,6 +202,43 @@ Added `src/tests/views/test_regressions.py` (8 tests) covering: static theme con
 
 ---
 
+## Planned: Multi-language support (English UI)
+
+**Status:** planned, not started. The groundwork is done: every user-facing text lives in
+`strings.py` and is looked up with `t("key")` / `t("key", value=...)`, and
+`tests/test_strings.py` checks that every key used in the code exists and receives the
+placeholders its text expects.
+
+### Steps
+
+1. **English catalog.** Add `EN` in `strings.py` (or split into `i18n/et.py` and `i18n/en.py`
+   once there are two catalogs) with the same keys as `ET`. Extend `test_strings.py` so every
+   catalog has exactly the keys of `ET` and the same placeholders per key.
+2. **Rename keys.** Keys were generated from the Estonian text (`common.tagasi_avalehele`).
+   Rename them to stable, language-neutral names (`common.back_to_home`) in one mechanical pass
+   before a second language makes renames expensive.
+3. **Language setting.** Persist the chosen language in the same settings file as the
+   training progress (user data directory), with a selector on the home screen next to the
+   light/dark toggle. Default to the OS locale (`locale.getlocale()`): Estonian for `et_*`,
+   English otherwise.
+4. **Switching at runtime.** Some labels are resolved at import time (theme toggle labels,
+   `exceptions/base.py` message map, presenter label dicts). Make them lazy (look up inside
+   functions/properties) so `set_language()` can be called after start-up; then rebuild the
+   visible view the same way the theme toggle repaints it.
+5. **Content, not just chrome.** Exercise sentences and the generated-exercise word list are
+   Estonian. Keep one word list per language and pick it with the UI language; the Estonian
+   letters (Ä, Ö, Ü, Õ, Š, Ž) stay in the flashcards for both languages since they are part of
+   the Morse tables, but could be grouped as "extended letters".
+6. **Formatting.** Use `str.format` placeholders only (already the case); decimal separator
+   and plural forms ("1 punkt" vs "2 punkti") need small helpers per language.
+7. **Docs and release.** Mention the language option in the README; screenshots per language.
+
+### Acceptance
+
+- Switching language updates every screen without restarting.
+- `pytest` fails if any catalog misses a key or a placeholder.
+- No Estonian text remains in code outside `strings.py` and the Estonian word list.
+
 ## Longer-Term Goals
 
 - Support custom deck import/export workflows while keeping controllers stateless

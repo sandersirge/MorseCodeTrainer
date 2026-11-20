@@ -16,6 +16,7 @@ services:
       - SDL_VIDEODRIVER=dummy
     volumes:
       - ../src:/app/src:ro
+      - ../tests:/app/tests:ro
       - ../reports:/app/reports
 
   # Application service (requires X11 forwarding on Linux/macOS)

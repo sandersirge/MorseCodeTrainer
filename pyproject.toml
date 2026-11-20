@@ -27,8 +27,6 @@ classifiers = [
 dependencies = [
     "customtkinter>=5.2.2",
     "pygame-ce>=2.5.6",
-    "ttkbootstrap>=1.19.2",
-    "pillow>=12.0.0",
 ]
 
 [project.optional-dependencies]
@@ -41,23 +39,19 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/sandersirge/MorseCodeProgram"
-Repository = "https://github.com/sandersirge/MorseCodeProgram"
-Issues = "https://github.com/sandersirge/MorseCodeProgram/issues"
+Homepage = "https://github.com/sandersirge/MorseCodeTrainer"
+Repository = "https://github.com/sandersirge/MorseCodeTrainer"
+Issues = "https://github.com/sandersirge/MorseCodeTrainer/issues"
 
 [project.gui-scripts]
-morse-trainer = "src.main.python.main:main"
+morse-trainer = "morsetrainer.main:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["src*"]
-
-[tool.setuptools.package-data]
-"*" = ["*.wav", "*.mp3", "*.txt", "*.json"]
+where = ["src"]
 
 # Ruff configuration
 [tool.ruff]
@@ -72,11 +66,12 @@ select = ["E", "F", "W", "I", "UP"]
 ignore = ["E501", "W191"]
 
 [tool.pytest.ini_options]
-testpaths = ["src/tests"]
+testpaths = ["tests"]
+pythonpath = ["src"]
 filterwarnings = [
     "ignore::pytest.PytestCollectionWarning",
 ]
-addopts = "--html=../reports/report.html --self-contained-html"
+addopts = "--html=reports/report.html --self-contained-html"
 markers = [
     "smoke: fast bootstrap sanity checks (deselect with '-m not smoke')",
 ]

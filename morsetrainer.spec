@@ -27,13 +27,11 @@ datas = [
 
 a = Analysis(
     ['run.py'],
-    pathex=[str(PROJECT_ROOT)],
+    pathex=[str(PROJECT_ROOT / 'src')],
     binaries=[],
     datas=datas,
     hiddenimports=[
-        'PIL._tkinter_finder',
         'customtkinter',
-        'ttkbootstrap',
         'pygame',
     ],
     hookspath=[],

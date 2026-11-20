@@ -6,31 +6,78 @@ on:
   pull_request:
     branches: [main, master]
 
+# Fast feedback first: lint (seconds) -> tests (a minute) -> packaging (slowest).
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Install linting tools
+      - name: Install ruff
+        run: python -m pip install ruff
+
+      - name: Ruff check (app, tests, scripts)
+        run: ruff check . --output-format=github
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+  test:
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Every supported Python on Linux; oldest and newest on Windows/macOS.
+        os: [ubuntu-latest]
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        include:
+          - { os: windows-latest, python-version: '3.10' }
+          - { os: windows-latest, python-version: '3.14' }
+          - { os: macos-latest, python-version: '3.10' }
+          - { os: macos-latest, python-version: '3.14' }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements/*.txt
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk libsdl2-dev libsdl2-mixer-dev
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements/requirements-dev.txt
 
-      - name: Run ruff check
-        run: ruff check src/main/python --output-format=github
+      - name: Smoke tests
+        run: pytest -m smoke -q
 
-      - name: Run ruff format check
-        run: ruff format --check src/main/python
+      - name: Full test suite
+        run: pytest -q
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: reports/report.html
+          retention-days: 30
 
   build:
-    needs: lint
+    needs: test
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -43,34 +90,25 @@ jobs:
           - { runner: macos-latest, os: macos, arch: arm64 }
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           architecture: ${{ matrix.python-arch || '' }}
+          cache: pip
+          cache-dependency-path: requirements/*.txt
 
       - name: Install system dependencies (Linux)
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-tk libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libsdl2-ttf-dev
-
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-${{ matrix.arch }}-pip-${{ hashFiles('requirements/*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.arch }}-pip-
+          sudo apt-get install -y python3-tk libsdl2-dev libsdl2-mixer-dev
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements/requirements.txt
-          pip install pyinstaller
+          pip install -r requirements/requirements.txt pyinstaller
 
       - name: Build application
         run: pyinstaller morsetrainer.spec
@@ -82,52 +120,3 @@ jobs:
       - name: Verify build output (Windows)
         if: runner.os == 'Windows'
         run: Get-ChildItem dist/MorseCodeTrainer/
-
-  test:
-    needs: build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install system dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libsdl2-ttf-dev
-
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements/*.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements/requirements-dev.txt
-
-      - name: Run tests
-        working-directory: src
-        run: pytest --tb=short -v
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
-          path: reports/report.html
-          retention-days: 30

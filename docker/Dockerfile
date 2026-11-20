@@ -34,8 +34,5 @@ RUN pip install --no-cache-dir -r requirements-dev.txt
 # Copy application code
 COPY . .
 
-# Set working directory for tests
-WORKDIR /app/src
-
 # Default command runs tests
 CMD ["pytest", "--tb=short", "-v"]
