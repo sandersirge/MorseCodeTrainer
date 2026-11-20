@@ -3,7 +3,7 @@
 from types import MappingProxyType
 
 from src.main.python.model.flashcard_session import FlashcardSession
-from src.main.python.model.test_session import TestSession
+from src.main.python.model.test_session import TestSession, is_morse
 from src.main.python.model.translation_session import TranslationSession
 from src.main.python.services.data_provider import (
 	FlashcardResources,
@@ -11,10 +11,14 @@ from src.main.python.services.data_provider import (
 	create_flashcard_resources,
 	create_test_session,
 	create_translation_resources,
-	load_flashcard_audio_map,
 	load_letter_cards,
 	load_number_cards,
 	load_symbol_cards,
+)
+from src.main.python.utils.morse_translator import (
+	convert_morse_to_text,
+	convert_text_to_morse,
+	normalize_morse,
 )
 
 
@@ -77,9 +81,8 @@ class TestCreateFlashcardResources:
 		for session in resources.sessions.values():
 			assert isinstance(session, FlashcardSession)
 
-	def test_audio_map_has_content(self):
-		resources = create_flashcard_resources()
-		assert len(resources.audio_map) > 0
+	def test_letters_include_z_caron(self):
+		assert ("Ž ž", "--..-") in load_letter_cards()
 
 
 class TestLoadLetterCards:
@@ -125,22 +128,33 @@ class TestLoadSymbolCards:
 		assert len(cards) > 0
 
 
-class TestLoadFlashcardAudioMap:
-	"""Tests for load_flashcard_audio_map function."""
+class TestExerciseMorseIsGenerated:
+	"""Morse in exercises is generated from text, so it always decodes back."""
 
-	def test_returns_mapping(self):
-		audio_map = load_flashcard_audio_map()
-		assert hasattr(audio_map, "__getitem__")
+	def test_translation_pairs_decode_to_their_text(self):
+		resources = create_translation_resources()
+		session = resources.morse_to_text
+		for morse, text in zip(session.prompts, session.answers):
+			assert convert_morse_to_text(morse) == " ".join(text.upper().split())
 
-	def test_has_content(self):
-		audio_map = load_flashcard_audio_map()
-		assert len(audio_map) > 0
+	def test_text_to_morse_answers_match(self):
+		session = create_translation_resources().text_to_morse
+		for text, morse in zip(session.prompts, session.answers):
+			assert normalize_morse(morse) == convert_text_to_morse(text)
 
-	def test_values_are_paths(self):
-		audio_map = load_flashcard_audio_map()
-		for path in audio_map.values():
-			assert isinstance(path, str)
-			assert path.endswith(".wav")
+	def test_test_session_morse_decodes(self):
+		session = create_test_session()
+		for prompt, answer in zip(session._prompts, session._answers):
+			morse, text = (answer, prompt) if is_morse(answer) else (prompt, answer)
+			assert convert_morse_to_text(morse) == " ".join(text.upper().split())
+
+	def test_display_morse_breaks_lines_only_between_words(self):
+		# Lines may only be split between words, so every line is whole words
+		# and only a single word may exceed the target width.
+		for morse in create_translation_resources().morse_to_text.prompts:
+			for line in morse.split("\n"):
+				assert line == line.strip()
+				assert len(line) <= 44 or "   " not in line
 
 
 class TestLruCaching:
@@ -153,6 +167,6 @@ class TestLruCaching:
 
 	def test_resources_share_cached_data(self):
 		# Multiple resource creations should use the same cached static data
-		audio1 = load_flashcard_audio_map()
-		audio2 = load_flashcard_audio_map()
-		assert audio1 is audio2
+		symbols1 = load_symbol_cards()
+		symbols2 = load_symbol_cards()
+		assert symbols1 is symbols2

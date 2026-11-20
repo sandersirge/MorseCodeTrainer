@@ -7,6 +7,7 @@ import customtkinter as ctk
 
 from ..controllers.protocols import SandboxPresenterProtocol
 from ..controllers.translation_sandbox_controller import SandboxState
+from ..exceptions import MorseTrainerError
 from ..navigator import Navigator
 from .audio_section import AudioSection
 from .theme import get_colors
@@ -36,12 +37,12 @@ class TranslationSandboxView:
 		*,
 		root,
 		nav: Navigator,
-		pygame_module,
+		audio_player,
 		presenter: SandboxPresenterProtocol,
 	) -> None:
 		self.root = root
 		self.nav = nav
-		self.pygame = pygame_module
+		self.audio = audio_player
 		self.presenter = presenter
 
 		self.translation_section: TranslationSection | None = None
@@ -108,12 +109,13 @@ class TranslationSandboxView:
 		self.audio_section = AudioSection(
 			card,
 			root=self.root,
-			pygame_module=self.pygame,
+			audio_player=self.audio,
 			on_play=self._on_play_audio,
 			on_save=self._on_save_audio,
 			on_save_as=self._on_save_audio_as,
 			on_volume_change=self._handle_volume_change,
-			on_speed_change=self._handle_speed_change,
+			on_wpm_change=self._handle_wpm_change,
+			on_effective_wpm_change=self._handle_effective_wpm_change,
 			on_pitch_change=self._handle_pitch_change,
 			on_home=self.nav.home,
 			on_audio_error=self._show_error,
@@ -161,57 +163,49 @@ class TranslationSandboxView:
 		if self.audio_section is None:
 			return
 		state = self.presenter.current_state()
-		if state is None or state.audio_path is None:
+		if state is None or state.audio_morse is None:
 			return
-		self.audio_section.play_audio(state.audio_path)
+		self.audio_section.play_audio(state.audio_morse)
 
 	def _on_save_audio(self) -> None:
 		if self.audio_section is not None:
 			self.audio_section.stop_playback()
 		try:
 			_, saved_path = self.presenter.save_audio_to_output()
-		except ValueError as exc:
-			self._show_error(str(exc))
+		except MorseTrainerError as exc:
+			self._show_error(exc.user_message)
 			return
-		if self.translation_section is not None:
-			self.translation_section.clear_input()
-		state = self.presenter.translate("")
-		self._render_state(state)
-		if self.translation_section is not None:
-			self.translation_section.focus_input()
-		messagebox.showinfo("Helifail salvestatud", f"Fail salvestatud:\n{saved_path}")
+		messagebox.showinfo(
+			"Helifail salvestatud", f"Fail salvestatud:\n{saved_path}", parent=self.root
+		)
 
 	def _on_save_audio_as(self) -> None:
 		if self.audio_section is not None:
 			self.audio_section.stop_playback()
 		state = self.presenter.current_state()
-		if state is None or state.audio_path is None:
+		if state is None or not state.audio_ready:
 			return
-		initial_path = Path(state.audio_path)
+		suggested = self.presenter.suggested_save_path()
+		initial_dir = suggested.parent if suggested.parent.is_dir() else Path.home()
 		selection = filedialog.asksaveasfilename(
+			parent=self.root,
 			title="Salvesta helifail",
 			defaultextension=".wav",
-			filetypes=[
-				("WAV helifail", "*.wav"),
-				("Kõik failid", "*.*"),
-			],
-			initialdir=str(initial_path.parent),
-			initialfile=initial_path.name,
+			# Only one filter: "*.*" filters misbehave in the macOS save dialog.
+			filetypes=[("WAV helifail", "*.wav")],
+			initialdir=str(initial_dir),
+			initialfile=suggested.name,
 		)
 		if not selection:
 			return
 		try:
 			_, saved_path = self.presenter.save_audio_as(Path(selection))
-		except ValueError as exc:
-			self._show_error(str(exc))
+		except MorseTrainerError as exc:
+			self._show_error(exc.user_message)
 			return
-		if self.translation_section is not None:
-			self.translation_section.clear_input()
-		state = self.presenter.translate("")
-		self._render_state(state)
-		if self.translation_section is not None:
-			self.translation_section.focus_input()
-		messagebox.showinfo("Helifail salvestatud", f"Fail salvestatud:\n{saved_path}")
+		messagebox.showinfo(
+			"Helifail salvestatud", f"Fail salvestatud:\n{saved_path}", parent=self.root
+		)
 
 	def _handle_volume_change(self, volume: float) -> None:
 		if self.audio_section is not None:
@@ -219,10 +213,16 @@ class TranslationSandboxView:
 		state = self.presenter.update_volume(volume)
 		self._render_state(state)
 
-	def _handle_speed_change(self, unit_duration_ms: int) -> None:
+	def _handle_wpm_change(self, wpm: int) -> None:
 		if self.audio_section is not None:
 			self.audio_section.stop_playback()
-		state = self.presenter.update_speed(unit_duration_ms)
+		state = self.presenter.update_wpm(wpm)
+		self._render_state(state)
+
+	def _handle_effective_wpm_change(self, effective_wpm: int) -> None:
+		if self.audio_section is not None:
+			self.audio_section.stop_playback()
+		state = self.presenter.update_effective_wpm(effective_wpm)
 		self._render_state(state)
 
 	def _handle_pitch_change(self, frequency_hz: float) -> None:

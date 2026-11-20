@@ -102,6 +102,16 @@ def set_appearance_mode(mode: str) -> None:
 			pass
 
 
+def system_appearance_mode() -> str:
+	"""The OS light/dark setting ("light" or "dark"); dark if it can't be read."""
+	try:
+		import darkdetect
+
+		return "light" if darkdetect.theme() == "Light" else "dark"
+	except Exception:
+		return "dark"
+
+
 def toggle_appearance_mode() -> str:
 	"""Toggle between light and dark mode. Returns the new mode."""
 	new_mode = "light" if _current_mode == "dark" else "dark"
@@ -129,10 +139,69 @@ def get_colors() -> ThemeColors:
 # ---------------------------------------------------------------------------
 # Font Families
 # ---------------------------------------------------------------------------
+# Preferred families, kept for reference. Real widgets use resolve_font_family(),
+# which picks the first family that is actually installed, so the UI looks
+# right on Windows, macOS and Linux instead of falling back to Tk's default.
 FONT_FAMILY_DEFAULT = "Segoe UI"
 FONT_FAMILY_SEMIBOLD = "Segoe UI Semibold"
 FONT_FAMILY_MONO = "Consolas"
 FONT_FAMILY_MONO_ALT = "JetBrains Mono"
+
+_FONT_CANDIDATES: dict[str, tuple[str, ...]] = {
+	"sans": (
+		"Segoe UI",  # Windows
+		".AppleSystemUIFont",  # macOS system font as exposed to Tk
+		"SF Pro Text",
+		"Helvetica Neue",
+		"Ubuntu",  # Linux
+		"Cantarell",
+		"Noto Sans",
+		"DejaVu Sans",
+		"Liberation Sans",
+		"Arial",
+		"Helvetica",
+	),
+	"mono": (
+		"Cascadia Mono",  # Windows 11
+		"Consolas",  # Windows
+		"SF Mono",  # macOS
+		"Menlo",
+		"JetBrains Mono",
+		"Ubuntu Mono",  # Linux
+		"DejaVu Sans Mono",
+		"Noto Sans Mono",
+		"Liberation Mono",
+		"Courier New",
+	),
+}
+_resolved_families: dict[str, str] = {}
+
+
+def resolve_font_family(role: str = "sans") -> str:
+	"""Return the first installed family for *role* ("sans" or "mono").
+
+	Needs a Tk root to list fonts; before one exists the first candidate is
+	returned without caching, so the real lookup happens once the UI is up.
+	"""
+
+	cached = _resolved_families.get(role)
+	if cached is not None:
+		return cached
+	candidates = _FONT_CANDIDATES.get(role, _FONT_CANDIDATES["sans"])
+	try:
+		from tkinter import font as tkfont
+
+		installed = {name.lower(): name for name in tkfont.families()}
+	except Exception:
+		return candidates[0]
+	for candidate in candidates:
+		if candidate.lower() in installed:
+			_resolved_families[role] = installed[candidate.lower()]
+			return _resolved_families[role]
+	fallback = "TkFixedFont" if role == "mono" else "TkDefaultFont"
+	_resolved_families[role] = tkfont.nametofont(fallback).actual("family")
+	return _resolved_families[role]
+
 
 # ---------------------------------------------------------------------------
 # Font Sizes

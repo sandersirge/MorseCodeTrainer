@@ -15,17 +15,15 @@ def mock_root():
 	return root
 
 
-@pytest.fixture
-def mock_pygame():
-	"""Minimal mock for the pygame module."""
-	pg = MagicMock()
-	pg.mixer.music = MagicMock()
-	return pg
+@pytest.fixture(autouse=True)
+def no_real_window(monkeypatch):
+	"""Window sizing/scaling needs a real Tk screen; replace it here."""
+	monkeypatch.setattr("src.main.python.application.MainWindow", MagicMock())
 
 
 @pytest.fixture
-def deps(mock_root, mock_pygame):
-	"""Build real presenters wired to real sessions, but with a mock root."""
+def deps(mock_root):
+	"""Build real presenters wired to real sessions, but with a mock root and player."""
 	from src.main.python.controllers.flashcard_controller import FlashcardPresenter
 	from src.main.python.controllers.test_controller import TestPresenter
 	from src.main.python.controllers.translation_controller import TranslationPresenter
@@ -33,7 +31,6 @@ def deps(mock_root, mock_pygame):
 		TranslationSandboxPresenter,
 	)
 	from src.main.python.services import (
-		AudioCache,
 		create_flashcard_resources,
 		create_test_session,
 		create_translation_resources,
@@ -41,59 +38,54 @@ def deps(mock_root, mock_pygame):
 
 	tr = create_translation_resources()
 	fr = create_flashcard_resources()
-	audio_cache = AudioCache(static_map=fr.audio_map)
 
 	return AppDependencies(
 		root=mock_root,
-		pygame_module=mock_pygame,
-		flashcard_presenter=FlashcardPresenter(sessions=fr.sessions, audio_cache=audio_cache),
+		audio_player=MagicMock(),
+		flashcard_presenter=FlashcardPresenter(sessions=fr.sessions),
 		translation_presenter=TranslationPresenter(
 			morse_session=tr.morse_to_text,
 			text_session=tr.text_to_morse,
-			audio_cache=audio_cache,
 		),
 		test_presenter=TestPresenter(create_test_session()),
 		sandbox_presenter=TranslationSandboxPresenter(),
 	)
 
 
-class TestApplicationWiring:
-	"""Verify that build_application() produces a fully-wired Application."""
+@pytest.fixture
+def app(deps):
+	return Application(
+		deps.root,
+		audio_player=deps.audio_player,
+		flashcard_presenter=deps.flashcard_presenter,
+		translation_presenter=deps.translation_presenter,
+		test_presenter=deps.test_presenter,
+		sandbox_presenter=deps.sandbox_presenter,
+	)
 
-	def test_build_application_returns_application(self, deps):
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
+
+class TestApplicationWiring:
+	"""Verify that Application is fully wired."""
+
+	def test_build_application_returns_application(self, app):
 		assert isinstance(app, Application)
 
-	def test_presenters_are_assigned(self, deps):
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
+	def test_presenters_are_assigned(self, app, deps):
 		assert app.flashcard_presenter is deps.flashcard_presenter
 		assert app.translation_presenter is deps.translation_presenter
 		assert app.test_presenter is deps.test_presenter
 		assert app.translation_sandbox_presenter is deps.sandbox_presenter
 
-	def test_views_initially_none(self, deps):
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
+	def test_window_is_set_up_with_title(self, app):
+		app.window.setup.assert_called_once()
+
+	def test_closing_window_shuts_down_audio(self, app, deps, mock_root):
+		mock_root.protocol.assert_called_once_with("WM_DELETE_WINDOW", app.quit)
+		app.quit()
+		deps.audio_player.shutdown.assert_called_once()
+		mock_root.destroy.assert_called_once()
+
+	def test_views_initially_none(self, app):
 		assert app.home_view is None
 		assert app.flashcard_view is None
 		assert app.translation_view is None
@@ -101,15 +93,7 @@ class TestApplicationWiring:
 		assert app.translation_sandbox_view is None
 		assert app.introduction_view is None
 
-	def test_attach_views_sets_all_views(self, deps):
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
+	def test_attach_views_sets_all_views(self, app):
 		views = {
 			"home_view": MagicMock(),
 			"introduction_view": MagicMock(),
@@ -127,89 +111,40 @@ class TestApplicationWiring:
 		assert app.translation_sandbox_view is views["translation_sandbox_view"]
 		assert app.test_view is views["test_view"]
 
-	def test_clear_screen_destroys_children(self, deps, mock_root):
+	def test_clear_screen_destroys_children(self, app, mock_root):
 		child1 = MagicMock()
 		child2 = MagicMock()
 		mock_root.winfo_children.return_value = [child1, child2]
-
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
 		app.clear_screen()
-
 		child1.destroy.assert_called_once()
 		child2.destroy.assert_called_once()
 
-	def test_avalehekülg_calls_home_show(self, deps):
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
-		mock_home = MagicMock()
-		app.home_view = mock_home
-		app.avalehekülg()
-		mock_home.show.assert_called_once()
+	def test_show_home_calls_home_show(self, app):
+		app.home_view = MagicMock()
+		app.show_home()
+		app.home_view.show.assert_called_once()
 
-	def test_avalehekülg_without_home_view_is_noop(self, deps, mock_root):
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
+	def test_show_home_without_home_view_is_noop(self, app):
 		app.home_view = None
-		app.avalehekülg()
-		# No crash, no view shown – just resets state
+		app.show_home()  # No crash, no view shown – just resets state
 
-	def test_tutvustus_calls_introduction_show(self, deps):
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
-		mock_intro = MagicMock()
-		app.introduction_view = mock_intro
-		app.tutvustus()
-		mock_intro.show.assert_called_once()
+	def test_show_introduction_calls_introduction_show(self, app):
+		app.introduction_view = MagicMock()
+		app.show_introduction()
+		app.introduction_view.show.assert_called_once()
 
-	def test_reset_flashcard_state_calls_view_reset(self, deps):
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
-		mock_view = MagicMock()
-		app.flashcard_view = mock_view
+	def test_show_translation_stops_audio(self, app, deps):
+		app.translation_view = MagicMock()
+		app.show_translation()
+		deps.audio_player.stop.assert_called()
+		app.translation_view.show_menu.assert_called_once()
+
+	def test_reset_flashcard_state_calls_view_reset(self, app):
+		app.flashcard_view = MagicMock()
 		app.reset_flashcard_state()
-		mock_view.reset_state.assert_called_once()
+		app.flashcard_view.reset_state.assert_called_once()
 
-	def test_reset_test_state_calls_view_reset(self, deps):
-		app = Application(
-			deps.root,
-			pygame_module=deps.pygame_module,
-			flashcard_presenter=deps.flashcard_presenter,
-			translation_presenter=deps.translation_presenter,
-			test_presenter=deps.test_presenter,
-			sandbox_presenter=deps.sandbox_presenter,
-		)
-		mock_view = MagicMock()
-		app.test_view = mock_view
+	def test_reset_test_state_calls_view_reset(self, app):
+		app.test_view = MagicMock()
 		app.reset_test_state()
-		mock_view.reset_state.assert_called_once()
+		app.test_view.reset_state.assert_called_once()

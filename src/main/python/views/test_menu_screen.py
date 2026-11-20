@@ -29,8 +29,8 @@ class TestMenuScreen:
 
 		self._title_font = make_font(size=34, weight="bold")
 		self._body_font = make_font(size=18)
-		self._callout_font = make_font(size=22, weight="bold", family="Segoe UI Semibold")
-		self._button_font = make_font(size=18, weight="bold", family="Segoe UI Semibold")
+		self._callout_font = make_font(size=22, weight="bold")
+		self._button_font = make_font(size=18, weight="bold")
 
 	def show(self) -> None:
 		if self.presenter.total_questions() == 0:

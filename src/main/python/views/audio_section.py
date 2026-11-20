@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 from tkinter import TclError
 
 import customtkinter as ctk
 
 from ..controllers.translation_sandbox_controller import SandboxState
+from ..services.audio_settings import MAX_FREQUENCY_HZ, MAX_WPM, MIN_FREQUENCY_HZ, MIN_WPM
 from .theme import get_colors
 from .widgets import (
 	font_button_large,
@@ -41,23 +41,25 @@ class AudioSection:
 		parent,
 		*,
 		root,
-		pygame_module,
+		audio_player,
 		on_play: Callable[[], None],
 		on_save: Callable[[], None],
 		on_save_as: Callable[[], None],
 		on_volume_change: Callable[[float], None],
-		on_speed_change: Callable[[int], None],
+		on_wpm_change: Callable[[int], None],
+		on_effective_wpm_change: Callable[[int], None],
 		on_pitch_change: Callable[[float], None],
 		on_home: Callable[[], None],
 		on_audio_error: Callable[[str], None],
 	) -> None:
 		self.root = root
-		self.pygame = pygame_module
+		self.audio = audio_player
 		self.on_play = on_play
 		self.on_save = on_save
 		self.on_save_as = on_save_as
 		self.on_volume_change = on_volume_change
-		self.on_speed_change = on_speed_change
+		self.on_wpm_change = on_wpm_change
+		self.on_effective_wpm_change = on_effective_wpm_change
 		self.on_pitch_change = on_pitch_change
 		self.on_home = on_home
 		self.on_audio_error = on_audio_error
@@ -87,23 +89,40 @@ class AudioSection:
 		self._build()
 
 	def _build(self) -> None:
-		header = make_label(
-			self.container,
+		header_panel = make_frame(self.container, fg_color="transparent")
+		header_panel.grid(row=0, column=0, padx=32, pady=(28, 18))
+		make_label(
+			header_panel,
 			"Helisätted ja salvestus",
 			font=self._title_font,
 			text_color=get_colors().text_muted,
-		)
-		header.grid(row=0, column=0, padx=32, pady=(28, 18))
+		).pack()
+		make_label(
+			header_panel,
+			"Kehtivad kõigis harjutustes. Kui üldine kiirus on väiksem, jäävad\n"
+			"tähed kiireks, aga vahed pikenevad (Farnsworthi meetod).",
+			font=make_font(size=14),
+			text_color=get_colors().text_placeholder,
+			justify="center",
+		).pack(pady=(6, 0))
+		if not self.audio.available:
+			make_label(
+				header_panel,
+				"Heliseadet ei leitud: esitamine pole võimalik, salvestamine töötab.",
+				font=make_font(size=14, weight="bold"),
+				text_color=get_colors().error_text,
+				justify="center",
+			).pack(pady=(6, 0))
 
 		sliders_panel = make_frame(self.container, fg_color="transparent")
 		sliders_panel.grid(row=1, column=0, padx=32, sticky="nsew")
-		sliders_panel.columnconfigure((0, 1, 2), weight=1)
+		sliders_panel.columnconfigure((0, 1, 2, 3), weight=1)
 
 		self._build_slider(
 			sliders_panel,
 			column=0,
 			key="volume",
-			title="Helitugevus",
+			title="Helitugevus\n",
 			from_value=0,
 			to_value=100,
 			number_of_steps=100,
@@ -114,23 +133,35 @@ class AudioSection:
 		self._build_slider(
 			sliders_panel,
 			column=1,
-			key="speed",
-			title="Kiirus",
-			from_value=30,
-			to_value=180,
-			number_of_steps=30,
-			command=self._handle_speed_slider,
-			value_from_state=lambda state: state.speed_ms,
-			label_from_state=lambda state: f"{state.speed_ms} ms",
+			key="wpm",
+			title="Tähtede\nkiirus",
+			from_value=MIN_WPM,
+			to_value=MAX_WPM,
+			number_of_steps=MAX_WPM - MIN_WPM,
+			command=self._handle_wpm_slider,
+			value_from_state=lambda state: state.wpm,
+			label_from_state=lambda state: f"{state.wpm} WPM",
 		)
 		self._build_slider(
 			sliders_panel,
 			column=2,
+			key="effective_wpm",
+			title="Üldine\nkiirus",
+			from_value=MIN_WPM,
+			to_value=MAX_WPM,
+			number_of_steps=MAX_WPM - MIN_WPM,
+			command=self._handle_effective_wpm_slider,
+			value_from_state=lambda state: state.effective_wpm,
+			label_from_state=lambda state: f"{state.effective_wpm} WPM",
+		)
+		self._build_slider(
+			sliders_panel,
+			column=3,
 			key="pitch",
-			title="Kõrgus",
-			from_value=200,
-			to_value=800,
-			number_of_steps=60,
+			title="Helikõrgus\n",
+			from_value=MIN_FREQUENCY_HZ,
+			to_value=MAX_FREQUENCY_HZ,
+			number_of_steps=int((MAX_FREQUENCY_HZ - MIN_FREQUENCY_HZ) // 10),
 			command=self._handle_pitch_slider,
 			value_from_state=lambda state: int(round(state.pitch_hz)),
 			label_from_state=lambda state: f"{int(round(state.pitch_hz))} Hz",
@@ -254,15 +285,14 @@ class AudioSection:
 
 	def render(self, state: SandboxState) -> None:
 		self._sync_sliders(state)
-		audio_ready = state.audio_ready and state.audio_path is not None
+		audio_ready = state.audio_ready and state.audio_morse is not None
 
-		for button in (
-			self.play_audio_button,
-			self.save_audio_button,
-			self.save_audio_as_button,
-		):
+		for button in (self.save_audio_button, self.save_audio_as_button):
 			if button is not None:
 				button.configure(state="normal" if audio_ready else "disabled")
+		if self.play_audio_button is not None:
+			can_play = audio_ready and self.audio.available
+			self.play_audio_button.configure(state="normal" if can_play else "disabled")
 
 		if not audio_ready:
 			self.mark_audio_playing(False)
@@ -280,19 +310,16 @@ class AudioSection:
 		finally:
 			self._updating_sliders = False
 
-	def play_audio(self, audio_path: Path) -> bool:
-		try:
-			self.pygame.mixer.music.load(str(audio_path))
-			self.pygame.mixer.music.play()
+	def play_audio(self, morse: str) -> bool:
+		if self.audio.play_morse(morse):
 			self.mark_audio_playing(True)
 			return True
-		except self.pygame.error:
-			self.mark_audio_playing(False)
-			self.on_audio_error("Helifaili ei saa esitada.")
-			return False
+		self.mark_audio_playing(False)
+		self.on_audio_error("Heli ei saa esitada.")
+		return False
 
 	def stop_playback(self) -> None:
-		self.pygame.mixer.music.stop()
+		self.audio.stop()
 		self.mark_audio_playing(False)
 
 	def mark_audio_playing(self, is_playing: bool) -> None:
@@ -318,7 +345,7 @@ class AudioSection:
 
 	def _poll_playback_status(self) -> None:
 		self._playback_poll_job = None
-		if self.pygame.mixer.music.get_busy():
+		if self.audio.is_busy():
 			self._playback_poll_job = self.root.after(200, self._poll_playback_status)
 		else:
 			self.mark_audio_playing(False)
@@ -328,10 +355,15 @@ class AudioSection:
 			return
 		self.on_volume_change(value / 100.0)
 
-	def _handle_speed_slider(self, value: float) -> None:
+	def _handle_wpm_slider(self, value: float) -> None:
 		if self._updating_sliders:
 			return
-		self.on_speed_change(int(round(value)))
+		self.on_wpm_change(int(round(value)))
+
+	def _handle_effective_wpm_slider(self, value: float) -> None:
+		if self._updating_sliders:
+			return
+		self.on_effective_wpm_change(int(round(value)))
 
 	def _handle_pitch_slider(self, value: float) -> None:
 		if self._updating_sliders:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,9 +9,23 @@ from ..exceptions import (
 	MorseTrainerError,
 	NoAudioContentError,
 )
-from ..services.audio_settings import AudioSettings
-from ..services.morse_audio import synthesize_morse_audio
+from ..services.audio_settings import AudioSettingsStore
+from ..services.morse_audio import save_wav
 from ..utils import morse_translator
+
+_OUTPUT_PREFIX = "tõlge"
+
+
+def default_output_dir() -> Path:
+	"""Where "Save" puts files: a folder in the user's Documents.
+
+	The working directory is not usable for this: in a packaged app it is "/"
+	on macOS and may be read-only (e.g. Program Files) on Windows.
+	"""
+
+	documents = Path.home() / "Documents"
+	base = documents if documents.is_dir() else Path.home()
+	return base / "MorseCodeTrainer"
 
 
 @dataclass(frozen=True)
@@ -27,14 +40,15 @@ class SandboxState:
 	output_text: str
 	error_message: str | None
 	audio_ready: bool
-	audio_path: Path | None
+	audio_morse: str | None
 	volume: float
-	speed_ms: int
+	wpm: int
+	effective_wpm: int
 	pitch_hz: float
 
 
 class TranslationSandboxPresenter:
-	"""Handles free-form translation and audio synthesis logic."""
+	"""Handles free-form translation and audio settings."""
 
 	_MODE_LABELS = {
 		"text_to_morse": "Tekst → Morse",
@@ -51,26 +65,26 @@ class TranslationSandboxPresenter:
 		"morse_to_text": "Tekst",
 	}
 
-	def __init__(self) -> None:
+	def __init__(
+		self,
+		settings_store: AudioSettingsStore | None = None,
+		*,
+		output_dir: Path | None = None,
+	) -> None:
+		self._store = settings_store or AudioSettingsStore()
+		self._output_dir = output_dir
 		self._mode = "text_to_morse"
 		self._input_text = ""
 		self._output_text = ""
 		self._error_message: str | None = None
 		self._morse_source: str = ""
-		self._audio_path: Path | None = None
-		self._audio_settings = AudioSettings()
 
 	def current_state(self) -> SandboxState:
 		return self._build_state()
 
 	def toggle_mode(self) -> SandboxState:
-		self._mode = "morse_to_text" if self._mode == "text_to_morse" else "text_to_morse"
-		self._input_text = ""
-		self._output_text = ""
-		self._error_message = None
-		self._morse_source = ""
-		self._discard_audio_file()
-		return self._build_state()
+		other = "morse_to_text" if self._mode == "text_to_morse" else "text_to_morse"
+		return self.set_mode(other)
 
 	def set_mode(self, mode: str) -> SandboxState:
 		if mode not in self._MODE_LABELS:
@@ -82,156 +96,84 @@ class TranslationSandboxPresenter:
 		self._output_text = ""
 		self._error_message = None
 		self._morse_source = ""
-		self._discard_audio_file()
 		return self._build_state()
 
 	def translate(self, text: str) -> SandboxState:
 		self._input_text = text
-		trimmed = text.strip()
-		if not trimmed:
+		if not text.strip():
 			self._output_text = ""
 			self._error_message = None
 			self._morse_source = ""
-			self._discard_audio_file()
 			return self._build_state()
 
 		try:
 			if self._mode == "text_to_morse":
 				self._output_text = morse_translator.convert_text_to_morse(text)
-				self._morse_source = self._output_text.strip()
+				self._morse_source = self._output_text
 			else:
 				self._output_text = morse_translator.convert_morse_to_text(text)
-				self._morse_source = trimmed
+				self._morse_source = morse_translator.normalize_morse(text)
 			self._error_message = None
 		except MorseTrainerError as exc:
 			self._output_text = ""
 			self._morse_source = ""
 			self._error_message = exc.user_message
-			self._discard_audio_file()
-			return self._build_state()
-		except ValueError as exc:
-			# Fallback for any non-typed ValueError
-			self._output_text = ""
-			self._morse_source = ""
-			self._error_message = str(exc)
-			self._discard_audio_file()
-			return self._build_state()
-
-		self._refresh_temp_audio()
-		return self._build_state()
-
-	def generate_audio(
-		self,
-		*,
-		frequency: float | None = None,
-		unit_duration_ms: int | None = None,
-		volume: float | None = None,
-	) -> SandboxState:
-		if not self._morse_source:
-			raise NoAudioContentError()
-		if frequency is not None:
-			self._audio_settings = self._audio_settings.with_pitch(frequency)
-		if unit_duration_ms is not None:
-			self._audio_settings = self._audio_settings.with_speed(unit_duration_ms)
-		if volume is not None:
-			self._audio_settings = self._audio_settings.with_volume(volume)
-		self._refresh_temp_audio()
 		return self._build_state()
 
 	def clear_audio(self) -> SandboxState:
-		self._discard_audio_file()
+		self._morse_source = ""
 		return self._build_state()
 
 	def save_audio_to_output(self) -> tuple[SandboxState, Path]:
-		if not self._audio_path:
-			raise NoAudioContentError(user_message="Ei ole helifaili salvestamiseks.")
 		target = self._next_output_file()
-		try:
-			shutil.copy2(self._audio_path, target)
-		except OSError as exc:
-			raise AudioSaveError(
-				"Failed to save audio file",
-				user_message="Helifaili ei õnnestunud salvestada.",
-				cause=exc,
-			) from exc
-		self._discard_audio_file()
-		return self._build_state(), target
+		return self._build_state(), self._save(target)
 
 	def save_audio_as(self, destination: Path) -> tuple[SandboxState, Path]:
-		if not self._audio_path:
-			raise NoAudioContentError(user_message="Ei ole helifaili salvestamiseks.")
-		resolved_destination = destination
-		if resolved_destination.suffix.lower() != ".wav":
-			resolved_destination = resolved_destination.with_suffix(".wav")
-		resolved_destination.parent.mkdir(parents=True, exist_ok=True)
-		try:
-			shutil.copy2(self._audio_path, resolved_destination)
-		except OSError as exc:
-			raise AudioSaveError(
-				"Failed to save audio file",
-				user_message="Helifaili ei õnnestunud salvestada.",
-				cause=exc,
-			) from exc
-		self._discard_audio_file()
-		return self._build_state(), resolved_destination
+		return self._build_state(), self._save(destination)
 
-	def _next_output_file(self) -> Path:
-		output_dir = Path.cwd() / "output"
-		output_dir.mkdir(parents=True, exist_ok=True)
-		prefix = "tõlge"
-		highest_index = 0
-		for candidate in output_dir.glob(f"{prefix}*.wav"):
-			suffix = candidate.stem[len(prefix) :]
-			if suffix.isdigit():
-				highest_index = max(highest_index, int(suffix))
-		next_index = highest_index + 1
-		return output_dir / f"{prefix}{next_index}.wav"
+	def suggested_save_path(self) -> Path:
+		return self._next_output_file()
 
 	def update_volume(self, volume: float) -> SandboxState:
-		self._audio_settings = self._audio_settings.with_volume(volume)
-		if self._morse_source:
-			self._refresh_temp_audio()
+		self._store.update(self._store.settings.with_volume(volume))
 		return self._build_state()
 
-	def update_speed(self, unit_duration_ms: int) -> SandboxState:
-		self._audio_settings = self._audio_settings.with_speed(unit_duration_ms)
-		if self._morse_source:
-			self._refresh_temp_audio()
+	def update_wpm(self, wpm: int) -> SandboxState:
+		self._store.update(self._store.settings.with_wpm(wpm))
+		return self._build_state()
+
+	def update_effective_wpm(self, effective_wpm: int) -> SandboxState:
+		self._store.update(self._store.settings.with_effective_wpm(effective_wpm))
 		return self._build_state()
 
 	def update_pitch(self, frequency_hz: float) -> SandboxState:
-		self._audio_settings = self._audio_settings.with_pitch(frequency_hz)
-		if self._morse_source:
-			self._refresh_temp_audio()
+		self._store.update(self._store.settings.with_pitch(frequency_hz))
 		return self._build_state()
 
-	def _refresh_temp_audio(
-		self,
-	) -> None:
-		self._discard_audio_file()
+	def _save(self, destination: Path) -> Path:
 		if not self._morse_source:
-			return
+			raise NoAudioContentError(user_message="Ei ole helifaili salvestamiseks.")
 		try:
-			self._audio_path = synthesize_morse_audio(
-				self._morse_source,
-				**self._audio_settings.as_synthesis_kwargs,
-			)
-		except ValueError:
-			self._audio_path = None
+			return save_wav(destination, self._morse_source, self._store.settings)
+		except OSError as exc:
+			raise AudioSaveError(
+				"Failed to save audio file",
+				user_message="Helifaili ei õnnestunud salvestada.",
+				cause=exc,
+			) from exc
 
-	def _discard_audio_file(self) -> bool:
-		if not self._audio_path:
-			return False
-		try:
-			if self._audio_path.exists():
-				self._audio_path.unlink()
-		except OSError:
-			pass
-		finally:
-			self._audio_path = None
-		return True
+	def _next_output_file(self) -> Path:
+		output_dir = self._output_dir or default_output_dir()
+		highest_index = 0
+		if output_dir.is_dir():
+			for candidate in output_dir.glob(f"{_OUTPUT_PREFIX}*.wav"):
+				suffix = candidate.stem[len(_OUTPUT_PREFIX) :]
+				if suffix.isdigit():
+					highest_index = max(highest_index, int(suffix))
+		return output_dir / f"{_OUTPUT_PREFIX}{highest_index + 1}.wav"
 
 	def _build_state(self) -> SandboxState:
+		settings = self._store.settings
 		return SandboxState(
 			mode=self._mode,
 			mode_label=self._MODE_LABELS[self._mode],
@@ -240,12 +182,13 @@ class TranslationSandboxPresenter:
 			input_text=self._input_text,
 			output_text=self._output_text,
 			error_message=self._error_message,
-			audio_ready=self._audio_path is not None,
-			audio_path=self._audio_path,
-			volume=self._audio_settings.volume,
-			speed_ms=self._audio_settings.unit_duration_ms,
-			pitch_hz=self._audio_settings.frequency_hz,
+			audio_ready=bool(self._morse_source),
+			audio_morse=self._morse_source or None,
+			volume=settings.volume,
+			wpm=settings.wpm,
+			effective_wpm=settings.effective_wpm,
+			pitch_hz=settings.frequency_hz,
 		)
 
 
-__all__ = ["SandboxState", "TranslationSandboxPresenter"]
+__all__ = ["SandboxState", "TranslationSandboxPresenter", "default_output_dir"]

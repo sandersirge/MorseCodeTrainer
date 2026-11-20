@@ -1,27 +1,14 @@
-"""Backward-compatible re-export shim  constants split into focused sub-modules.
+"""Re-export shim for the resource modules.
 
 morse_data     Morse symbol tables and lookup maps
-audio_data     Audio asset path maps
-exercise_data  Training exercise sample data
+exercise_data  Translation and test exercise texts
 """
 
 from __future__ import annotations
 
-from .audio_data import (
-	LETTER_AUDIO_KEYS,
-	LETTER_AUDIO_MAP,
-	NUMBER_AUDIO_KEYS,
-	NUMBER_AUDIO_MAP,
-	SYMBOL_AUDIO_KEYS,
-	SYMBOL_AUDIO_MAP,
-)
-from .exercise_data import (
-	TEST_MORSE_ANSWERS,
-	TEST_TEXT_PROMPTS,
-	TRANSLATION_MORSE_SAMPLES,
-	TRANSLATION_TEXT_SAMPLES,
-)
+from .exercise_data import TEST_ITEMS, TRANSLATION_SENTENCES, TestItemData
 from .morse_data import (
+	LETTER_ENCODE_ALIASES,
 	LETTER_MORSE_PAIRS,
 	LETTER_TO_MORSE_MAP,
 	LOWERCASE_LETTER_KEYS,
@@ -38,18 +25,15 @@ from .morse_data import (
 )
 
 __all__ = [
+	"LETTER_ENCODE_ALIASES",
 	"LETTER_MORSE_PAIRS",
 	"LETTER_TO_MORSE_MAP",
 	"NUMBER_SYMBOL_MORSE_PAIRS",
 	"NUMBER_TO_MORSE_MAP",
 	"SYMBOL_TO_MORSE_MAP",
-	"LETTER_AUDIO_MAP",
-	"NUMBER_AUDIO_MAP",
-	"SYMBOL_AUDIO_MAP",
-	"TRANSLATION_TEXT_SAMPLES",
-	"TRANSLATION_MORSE_SAMPLES",
-	"TEST_TEXT_PROMPTS",
-	"TEST_MORSE_ANSWERS",
+	"TRANSLATION_SENTENCES",
+	"TEST_ITEMS",
+	"TestItemData",
 	"UPPERCASE_LETTER_KEYS",
 	"UPPERCASE_LETTER_ORDER",
 	"LOWERCASE_LETTER_KEYS",
@@ -58,7 +42,4 @@ __all__ = [
 	"NUMBER_ORDER",
 	"SYMBOL_KEYS",
 	"SYMBOL_ORDER",
-	"LETTER_AUDIO_KEYS",
-	"NUMBER_AUDIO_KEYS",
-	"SYMBOL_AUDIO_KEYS",
 ]

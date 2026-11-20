@@ -1,15 +1,16 @@
 """Tests for TranslationSandboxPresenter controller."""
 
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from src.main.python.controllers.translation_sandbox_controller import (
 	SandboxState,
 	TranslationSandboxPresenter,
+	default_output_dir,
 )
 from src.main.python.exceptions import InvalidModeError, NoAudioContentError
+from src.main.python.services.audio_settings import AudioSettingsStore
 
 
 @pytest.fixture
@@ -130,64 +131,73 @@ class TestTranslationSandboxPresenterTranslate:
 		assert presenter._input_text == "HELLO"
 
 
-class TestTranslationSandboxPresenterGenerateAudio:
-	"""Tests for generate_audio method."""
+class TestTranslationSandboxPresenterAudio:
+	"""Audio is ready whenever there is valid Morse to play or save."""
 
-	def test_generate_audio_without_content_raises(self, presenter):
-		with pytest.raises(NoAudioContentError):
-			presenter.generate_audio()
+	def test_no_audio_without_content(self, presenter):
+		state = presenter.current_state()
+		assert not state.audio_ready
+		assert state.audio_morse is None
 
-	@patch("src.main.python.controllers.translation_sandbox_controller.synthesize_morse_audio")
-	def test_generate_audio_with_content(self, mock_synth, presenter):
-		mock_synth.return_value = Path("/tmp/audio.wav")
-		presenter.translate("A")  # Creates morse content
-		state = presenter.generate_audio()
-		assert state.audio_ready or presenter._audio_path is not None
+	def test_text_translation_makes_audio_ready(self, presenter):
+		state = presenter.translate("SOS")
+		assert state.audio_ready
+		assert state.audio_morse == "... --- ..."
 
-	@patch("src.main.python.controllers.translation_sandbox_controller.synthesize_morse_audio")
-	def test_generate_audio_updates_settings(self, mock_synth, presenter):
-		mock_synth.return_value = Path("/tmp/audio.wav")
-		presenter.translate("A")
-		presenter.generate_audio(frequency=600.0, unit_duration_ms=80, volume=0.8)
-		assert presenter._audio_settings.frequency_hz == 600.0
-		assert presenter._audio_settings.unit_duration_ms == 80
-		assert presenter._audio_settings.volume == 0.8
+	def test_morse_input_is_normalized_for_audio(self, presenter):
+		presenter.set_mode("morse_to_text")
+		state = presenter.translate(" ...  /  ---  ")
+		assert state.audio_morse == "...   ---"
+
+	def test_error_clears_audio(self, presenter):
+		presenter.translate("SOS")
+		state = presenter.translate("#")
+		assert not state.audio_ready
 
 
 class TestTranslationSandboxPresenterClearAudio:
 	"""Tests for clear_audio method."""
 
-	def test_clear_audio_resets_path(self, presenter):
-		presenter._audio_path = Path("/tmp/audio.wav")
+	def test_clear_audio_resets_audio(self, presenter):
+		presenter.translate("A")
 		state = presenter.clear_audio()
-		assert presenter._audio_path is None
 		assert not state.audio_ready
 
 
 class TestTranslationSandboxPresenterSaveAudio:
-	"""Tests for save_audio methods."""
+	"""Tests for save_audio methods (written straight to WAV, no temp files)."""
 
-	def test_save_audio_without_file_raises(self, presenter):
+	def test_save_audio_without_content_raises(self, tmp_path):
+		presenter = TranslationSandboxPresenter(output_dir=tmp_path)
 		with pytest.raises(NoAudioContentError):
 			presenter.save_audio_to_output()
 
-	def test_save_audio_as_without_file_raises(self, presenter):
+	def test_save_audio_as_without_content_raises(self, presenter, tmp_path):
 		with pytest.raises(NoAudioContentError):
-			presenter.save_audio_as(Path("/tmp/output.wav"))
+			presenter.save_audio_as(tmp_path / "output.wav")
 
-	@patch("shutil.copy2")
-	@patch.object(Path, "exists", return_value=True)
-	@patch.object(Path, "mkdir")
-	def test_save_audio_as_appends_wav_extension(
-		self, mock_mkdir, mock_exists, mock_copy, presenter
-	):
-		presenter._audio_path = Path("/tmp/audio.wav")
-		state, path = presenter.save_audio_as(Path("/tmp/output"))
+	def test_save_audio_as_appends_wav_extension(self, presenter, tmp_path):
+		presenter.translate("A")
+		state, path = presenter.save_audio_as(tmp_path / "output")
 		assert path.suffix == ".wav"
+		assert path.is_file()
+		assert state.audio_ready  # still playable after saving
+
+	def test_save_to_output_numbers_files(self, tmp_path):
+		presenter = TranslationSandboxPresenter(output_dir=tmp_path)
+		presenter.translate("A")
+		_, first = presenter.save_audio_to_output()
+		_, second = presenter.save_audio_to_output()
+		assert first.name == "tõlge1.wav"
+		assert second.name == "tõlge2.wav"
+		assert first.is_file() and second.is_file()
+
+	def test_default_output_dir_is_in_user_home(self):
+		assert Path.home() in default_output_dir().parents
 
 
 class TestTranslationSandboxPresenterUpdateSettings:
-	"""Tests for update_* methods."""
+	"""Tests for update_* methods (they change the shared settings store)."""
 
 	def test_update_volume(self, presenter):
 		state = presenter.update_volume(0.75)
@@ -197,13 +207,24 @@ class TestTranslationSandboxPresenterUpdateSettings:
 		state = presenter.update_volume(1.5)  # Over max
 		assert state.volume == 1.0
 
-	def test_update_speed(self, presenter):
-		state = presenter.update_speed(100)
-		assert state.speed_ms == 100
+	def test_update_wpm(self, presenter):
+		state = presenter.update_wpm(25)
+		assert state.wpm == 25
+
+	def test_update_effective_wpm(self, presenter):
+		presenter.update_wpm(25)
+		state = presenter.update_effective_wpm(12)
+		assert state.effective_wpm == 12
 
 	def test_update_pitch(self, presenter):
 		state = presenter.update_pitch(500.0)
 		assert state.pitch_hz == 500.0
+
+	def test_settings_are_shared_through_store(self):
+		store = AudioSettingsStore()
+		presenter = TranslationSandboxPresenter(store)
+		presenter.update_pitch(700.0)
+		assert store.settings.frequency_hz == 700.0
 
 
 class TestSandboxState:
@@ -219,10 +240,11 @@ class TestSandboxState:
 			output_text="",
 			error_message=None,
 			audio_ready=False,
-			audio_path=None,
+			audio_morse=None,
 			volume=0.5,
-			speed_ms=60,
-			pitch_hz=400.0,
+			wpm=20,
+			effective_wpm=15,
+			pitch_hz=600.0,
 		)
 		with pytest.raises(AttributeError):
 			state.mode = "morse_to_text"

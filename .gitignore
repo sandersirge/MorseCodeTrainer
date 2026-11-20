@@ -31,3 +31,6 @@ reports/*.html
 # OS
 .DS_Store
 Thumbs.db
+
+# IDE settings
+.idea/

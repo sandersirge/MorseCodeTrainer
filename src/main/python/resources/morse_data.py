@@ -33,10 +33,19 @@ LETTER_MORSE_PAIRS = (
 	("x", "-..-"),
 	("y", "-.--"),
 	("z", "--.."),
+	("ž", "--..-"),
 )
 
+# Letters that can be *sent* but share their code with another letter, so they
+# are never produced when decoding and get no flashcard of their own.
+# Õ has no code of its own in the extended Morse alphabet; Estonian practice
+# sends it like Ö (also used for Ó and Ø).
+LETTER_ENCODE_ALIASES: dict[str, str] = {
+	"õ": "---.",
+}
+
 LETTER_TO_MORSE_MAP: dict[str, str] = {}
-for _letter, _code in LETTER_MORSE_PAIRS:
+for _letter, _code in (*LETTER_MORSE_PAIRS, *LETTER_ENCODE_ALIASES.items()):
 	LETTER_TO_MORSE_MAP[_letter] = _code
 	LETTER_TO_MORSE_MAP[_letter.upper()] = _code
 
@@ -85,6 +94,7 @@ SYMBOL_KEYS = tuple(char for char, _ in NUMBER_SYMBOL_MORSE_PAIRS if not char.is
 SYMBOL_ORDER = SYMBOL_KEYS
 
 __all__ = [
+	"LETTER_ENCODE_ALIASES",
 	"LETTER_MORSE_PAIRS",
 	"LETTER_TO_MORSE_MAP",
 	"NUMBER_SYMBOL_MORSE_PAIRS",

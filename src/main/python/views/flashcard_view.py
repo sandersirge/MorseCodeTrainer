@@ -8,7 +8,15 @@ from ..controllers.flashcard_controller import FlashcardState
 from ..controllers.protocols import FlashcardPresenterProtocol
 from ..navigator import Navigator
 from .theme import get_colors, register_theme_callback
-from .widgets import make_button, make_card, make_font, make_frame, make_label, make_progress_bar
+from .widgets import (
+	font_mono,
+	make_button,
+	make_card,
+	make_font,
+	make_frame,
+	make_label,
+	make_progress_bar,
+)
 
 
 class FlashcardView:
@@ -18,12 +26,12 @@ class FlashcardView:
 		self,
 		root: Tk,
 		nav: Navigator,
-		pygame_module,
+		audio_player,
 		presenter: FlashcardPresenterProtocol,
 	) -> None:
 		self.root = root
 		self.nav = nav
-		self.pygame = pygame_module
+		self.audio = audio_player
 		self.presenter = presenter
 		self.state: FlashcardState | None = None
 		self._rendered_category: str | None = None
@@ -43,7 +51,7 @@ class FlashcardView:
 		self._peak_progress_value = 0.0
 		self._title_font = make_font(size=34, weight="bold")
 		self._body_font = make_font(size=18, weight="bold")
-		self._display_font = make_font(size=78, weight="bold", family="Consolas")
+		self._display_font = font_mono(78)
 		self._button_font = make_font(size=18, weight="bold")
 		self._large_button_font = make_font(size=20, weight="bold")
 		self._message_font = make_font(size=22, weight="bold")
@@ -68,7 +76,7 @@ class FlashcardView:
 		self.next_button = None
 		self.audio_button = None
 		self._peak_progress_value = 0.0
-		self.pygame.mixer.music.stop()
+		self.audio.stop()
 
 	def _clear_content(self) -> None:
 		"""Destroy this view's children without touching other views."""
@@ -323,7 +331,7 @@ class FlashcardView:
 			self.next_button.configure(text=state.next_label)
 
 		if self.audio_button:
-			if state.show_audio_button:
+			if state.show_audio_button and self.audio.available:
 				self.audio_button.configure(state="normal")
 				self.audio_button.grid()
 			else:
@@ -384,19 +392,15 @@ class FlashcardView:
 		self._render_state()
 
 	def play_flashcard_audio(self) -> None:
-		if not self.state or not self.state.audio_path:
+		if not self.state or not self.state.audio_morse:
 			return
-		try:
-			self.pygame.mixer.music.stop()
-			self.pygame.mixer.music.load(self.state.audio_path)
-			self.pygame.mixer.music.play()
-		except (FileNotFoundError, self.pygame.error):
-			messagebox.showerror("Heli", "Helifaili ei õnnestunud esitada.")
+		if not self.audio.play_morse(self.state.audio_morse):
+			messagebox.showerror("Heli", "Heli ei õnnestunud esitada.", parent=self.root)
 
 	# Completion -----------------------------------------------------------
 
 	def flashcard_finish(self) -> None:
-		self.pygame.mixer.music.stop()
+		self.audio.stop()
 		self.reset_state()
 		self._clear_content()
 		colors = get_colors()

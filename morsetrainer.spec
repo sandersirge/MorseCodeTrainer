@@ -7,8 +7,6 @@ block_cipher = None
 
 # Paths
 PROJECT_ROOT = Path(SPECPATH)
-SRC_PATH = PROJECT_ROOT / 'src'
-RESOURCES_PATH = SRC_PATH / 'main' / 'resources'
 ICONS_PATH = PROJECT_ROOT / 'resources' / 'icons'
 
 # Determine icon based on platform
@@ -19,13 +17,13 @@ elif sys.platform == 'darwin':
 else:
     icon_file = None
 
-# Collect data files (resources) — skip directories that are empty or missing
-_resource_dirs = ['letters', 'numbers', 'symbols']
-datas = []
-for _name in _resource_dirs:
-    _dir = RESOURCES_PATH / _name
-    if _dir.is_dir() and any(_dir.iterdir()):
-        datas.append((str(_dir), f'src/main/resources/{_name}'))
+# Audio is synthesized at runtime, so the only data files are the window icons
+# (loaded by views/window.py from <bundle>/resources/icons).
+datas = [
+    (str(ICONS_PATH / _name), 'resources/icons')
+    for _name in ('morsetrainer.ico', 'morsetrainer-256.png')
+    if (ICONS_PATH / _name).is_file()
+]
 
 a = Analysis(
     ['run.py'],

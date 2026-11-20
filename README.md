@@ -25,9 +25,12 @@ Category-based flashcard decks covering letters, numbers, and symbols. Audio pro
 Free-form translator for experimenting with Morse code. Features adjustable audio settings:
 
 - Volume control
-- Speed (WPM) adjustment
+- Character speed and overall speed in WPM (Farnsworth timing)
 - Pitch customization
-- Save and export options
+- Save as WAV (default folder: `Documents/MorseCodeTrainer`)
+
+Morse input accepts three spaces, `/` or a new line as a word break. Decoded text is
+shown in uppercase, since Morse has no letter case.
 
 ### ⏱️ Timed Tests
 
@@ -39,11 +42,15 @@ Challenge yourself with randomized prompts, accuracy scoring, and detailed timin
 
 ### 🔊 Audio Engine
 
-High-quality Morse code audio powered by pygame-ce with custom WAV synthesis for authentic dit/dah tones. An `AudioCache` service synthesizes audio on demand and caches the result for the session:
+Morse audio is synthesized in memory and played with pygame-ce; no audio files are shipped
+or written to the temp folder.
 
-- **Learning mode** — dynamic synthesis with static `.wav` file fallback
-- **Translation exercises** (morse→text) — dynamic synthesis
-- **Sandbox** — adjustable speed, pitch, and volume controls
+- **One set of settings everywhere**: the speed, pitch and volume chosen in the sandbox apply to
+  flashcards and translation exercises too
+- **Standard timing**: one dot = 1200 ms / WPM; when the overall speed is lower than the
+  character speed, letters stay fast and only the gaps grow (ARRL Farnsworth timing)
+- **Click-free tones**: each tone fades in and out over 5 ms
+- **No sound device?** The app still starts; play buttons are disabled and saving still works
 
 ## 🚀 Getting Started
 
@@ -184,33 +191,26 @@ MorseCodeProgram/
 │   │   │   ├── model/        # Domain entities & state
 │   │   │   ├── resources/    # Constants & data tables
 │   │   │   │   ├── morse_data.py     # Symbol tables & lookup maps
-│   │   │   │   ├── audio_data.py     # Audio asset path maps
-│   │   │   │   ├── exercise_data.py  # Training/test samples
+│   │   │   │   ├── exercise_data.py  # Exercise texts (Morse is generated)
 │   │   │   │   └── constants.py      # Re-export shim
 │   │   │   ├── services/     # Audio, data providers
-│   │   │   │   ├── audio_cache.py    # Dynamic synthesis + cache
-│   │   │   │   ├── morse_audio.py    # WAV synthesis engine
-│   │   │   │   ├── audio_provider.py # pygame wrapper
-│   │   │   │   ├── audio_settings.py # User preferences
+│   │   │   │   ├── morse_audio.py    # Timing + in-memory WAV synthesis
+│   │   │   │   ├── audio_player.py   # Playback, cache, no-device fallback
+│   │   │   │   ├── audio_provider.py # pygame import
+│   │   │   │   ├── audio_settings.py # Shared settings (WPM, pitch, volume)
 │   │   │   │   └── data_provider.py  # Session factories
 │   │   │   ├── utils/        # Morse translator
 │   │   │   └── views/        # CustomTkinter UI
-│   │   │       ├── theme.py          # get_colors(), callbacks
+│   │   │       ├── theme.py          # Colours, OS font detection
+│   │   │       ├── window.py         # Window size, UI scaling, icon
 │   │   │       ├── widgets.py        # Shared UI components
 │   │   │       └── ...               # Screen views
-│   │   │
-│   │   └── resources/        # Static audio files
-│   │       ├── letters/      # Letter audio (.wav)
-│   │       ├── numbers/      # Number audio (.wav)
-│   │       └── symbols/      # Symbol audio (.wav)
 │   │
 │   └── tests/                # pytest test suite
 │       ├── conftest.py       # Shared fixtures
 │       ├── exceptions/       # Exception hierarchy tests
 │       ├── test_smoke.py     # Bootstrap sanity checks
 │       └── ...
-│
-└── output/                   # Generated files (exports, saves)
 ```
 
 ## 🏗️ Architecture
@@ -227,7 +227,9 @@ The application follows an **MVC-style architecture**:
 - **Navigator Pattern**: A frozen `Navigator` dataclass provides named `Callable` fields for all routes. Views depend on `Navigator` instead of individual callbacks — adding a screen only requires a new field
 - **ViewStack Frame-Swap**: `ViewStack` registers a persistent `CTkFrame` per view. Navigation uses `pack_forget()`/`pack()` to swap visible frames — no widgets are destroyed on screen transitions
 - **Protocol-Based Decoupling**: Views annotate presenter parameters with `Protocol` types from `controllers/protocols.py`. Concrete presenters satisfy protocols implicitly — no inheritance required
-- **Dynamic Audio**: `AudioCache` synthesizes Morse audio on demand via `synthesize_morse_audio()`, caching results per session. Flashcard mode falls back to static `.wav` files; translation exercises use dynamic-only audio
+- **Dynamic Audio**: presenters expose the Morse to play; `AudioPlayer` renders it in memory with the shared `AudioSettings` and caches the sounds
+- **Generated exercise data**: exercises are stored as text only; their Morse is produced by the translator, so prompts and answers can't disagree
+- **Cross-platform window**: `views/window.py` opens the window at a size that fits the screen and scales every widget and font to it (rescaling on resize). It also handles HiDPI on Linux, sets the icon per OS (`.ico` on Windows, PNG elsewhere), and starts in the OS light/dark mode
 - **Immutable State**: Models expose frozen dataclass states to prevent accidental mutation
 - **Decoupled Audio**: pygame-ce integration is mocked in tests for CI stability
 - **Theme Tokens**: Centralized font/color constants in `views/theme.py`; all views call `get_colors()` at render time for correct light/dark theming
@@ -249,8 +251,8 @@ Tests use pytest with fixtures defined in `src/tests/conftest.py`. Audio playbac
 ```python
 # Example test
 def test_translation_session_advances(sample_translation_items):
-    session = TranslationSession.create(sample_translation_items)
-    assert session.current_index == 0
+	session = TranslationSession.create(sample_translation_items)
+	assert session.current_index == 0
 ```
 
 ### Theme Customization
@@ -350,7 +352,7 @@ See [DEVPLAN.md](DEVPLAN.md) for detailed development plans.
 - [x] Smoke test suite (`pytest -m smoke`)
 - [x] Navigator routing & ViewStack frame-swap architecture
 - [x] Protocol-based presenter decoupling
-- [x] Dynamic audio synthesis via AudioCache
+- [x] In-memory audio synthesis with shared WPM/Farnsworth settings
 - [ ] Custom deck import/export
 - [ ] Analytics exports (CSV summaries)
 

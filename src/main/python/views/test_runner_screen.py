@@ -11,6 +11,7 @@ from ..model.test_session import TestSummary
 from .test_shared import prepare_backdrop
 from .theme import get_colors, register_theme_callback
 from .widgets import (
+	font_mono,
 	make_button,
 	make_card,
 	make_entry,
@@ -29,7 +30,7 @@ class TestRunnerScreen:
 		root: ctk.CTk,
 		clear_screen: Callable[[], None],
 		presenter: TestPresenterProtocol,
-		pygame_module,
+		audio_player,
 		*,
 		on_review: Callable[[TestSummary], None],
 		on_exit_to_menu: Callable[[], None],
@@ -37,7 +38,7 @@ class TestRunnerScreen:
 		self.root = root
 		self.clear_screen = clear_screen
 		self.presenter = presenter
-		self.pygame = pygame_module
+		self.audio = audio_player
 		self.on_review = on_review
 		self.on_exit_to_menu = on_exit_to_menu
 
@@ -54,9 +55,9 @@ class TestRunnerScreen:
 		self._subtitle_font = make_font(size=20, weight="bold")
 		self._body_font = make_font(size=18)
 		self._muted_font = make_font(size=16)
-		self._question_font = make_font(size=34, weight="bold", family="Consolas")
-		self._button_font = make_font(size=18, weight="bold", family="Segoe UI Semibold")
-		self._timer_font = make_font(size=24, weight="bold", family="JetBrains Mono")
+		self._question_font = font_mono(34)
+		self._button_font = make_font(size=18, weight="bold")
+		self._timer_font = font_mono(24)
 
 		self._built = False
 		self._backdrop: ctk.CTkFrame | None = None
@@ -321,6 +322,7 @@ class TestRunnerScreen:
 		)
 		self.answer_entry.grid(row=0, column=0, sticky="ew")
 		self.answer_entry.bind("<Return>", self._handle_submit)
+		self.answer_entry.bind("<KP_Enter>", self._handle_submit)
 
 		self._action_row = make_frame(self._card, fg_color="transparent")
 		self._action_row.grid(row=2, column=0, pady=(0, 32))

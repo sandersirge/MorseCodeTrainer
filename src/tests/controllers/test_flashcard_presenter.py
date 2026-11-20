@@ -7,7 +7,6 @@ import pytest
 from src.main.python.controllers.flashcard_controller import FlashcardPresenter, FlashcardState
 from src.main.python.exceptions import SessionNotInitializedError
 from src.main.python.model.flashcard_session import Flashcard, FlashcardSession
-from src.main.python.services.audio_cache import AudioCache
 
 
 @pytest.fixture
@@ -31,20 +30,9 @@ def mock_sessions():
 
 
 @pytest.fixture
-def audio_cache():
-	"""Create a mock AudioCache."""
-	cache = Mock(spec=AudioCache)
-	cache.resolve_with_fallback.side_effect = lambda morse, key: {
-		"A": "/audio/a.wav",
-		"1": "/audio/1.wav",
-	}.get(key)
-	return cache
-
-
-@pytest.fixture
-def presenter(mock_sessions, audio_cache):
+def presenter(mock_sessions):
 	"""Create a FlashcardPresenter with mock sessions."""
-	return FlashcardPresenter(mock_sessions, audio_cache)
+	return FlashcardPresenter(mock_sessions)
 
 
 class TestFlashcardPresenterInit:
@@ -54,8 +42,8 @@ class TestFlashcardPresenterInit:
 		assert "letters" in presenter._sessions
 		assert "numbers" in presenter._sessions
 
-	def test_init_stores_audio_cache(self, presenter):
-		assert presenter._audio_cache is not None
+	def test_init_starts_without_category(self, presenter):
+		assert presenter._active_category is None
 
 
 class TestFlashcardPresenterStart:
@@ -193,10 +181,10 @@ class TestFlashcardPresenterReset:
 class TestFlashcardState:
 	"""Tests for FlashcardState dataclass."""
 
-	def test_state_contains_audio_path(self, presenter, mock_sessions):
+	def test_state_contains_morse_to_play(self, presenter, mock_sessions):
 		presenter.start("letters")
 		state = presenter.current_state()
-		assert state.audio_path == "/audio/a.wav"
+		assert state.audio_morse == ".-"
 
 	def test_show_audio_button_false_when_front(self, presenter, mock_sessions):
 		presenter.start("letters")

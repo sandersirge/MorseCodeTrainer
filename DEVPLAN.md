@@ -154,6 +154,7 @@ Several existing test classes test one input at a time for what are fundamentall
 def test_a_encodes_correctly(self): ...
 def test_b_encodes_correctly(self): ...
 
+
 # Better: parametrized
 @pytest.mark.parametrize("letter,expected", consts.LETTER_MORSE_PAIRS)
 def test_all_letters_encode_correctly(self, letter, expected): ...
@@ -175,10 +176,11 @@ from src.main.python.utils.morse_translator import MorseTranslator
 
 SUPPORTED_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789"
 
+
 @given(st.text(alphabet=SUPPORTED_CHARS, min_size=1, max_size=40))
 def test_encode_decode_roundtrip(text):
-    result = MorseTranslator.decode(MorseTranslator.encode(text))
-    assert result.lower() == text.lower()
+	result = MorseTranslator.decode(MorseTranslator.encode(text))
+	assert result.lower() == text.lower()
 ```
 
 ### 6. ~~Add smoke tests marked with `pytest.mark.smoke`~~ ✅ DONE

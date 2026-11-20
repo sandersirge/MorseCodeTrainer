@@ -17,18 +17,18 @@ class TestView:
 		self,
 		root: ctk.CTk,
 		nav: Navigator,
-		pygame_module,
+		audio_player,
 		presenter: TestPresenterProtocol,
 	) -> None:
 		self.root = root
 		self.nav = nav
-		self.pygame = pygame_module
+		self.audio = audio_player
 
 		self.runner_screen = TestRunnerScreen(
 			root,
 			self._clear_content,
 			presenter,
-			pygame_module,
+			audio_player,
 			on_review=self._show_review,
 			on_exit_to_menu=self.show_menu,
 		)
@@ -55,7 +55,7 @@ class TestView:
 		self.review_screen.reset()
 
 	def show_menu(self) -> None:
-		self.pygame.mixer.music.stop()
+		self.audio.stop()
 		self.reset_state()
 		self.menu_screen.show()
 

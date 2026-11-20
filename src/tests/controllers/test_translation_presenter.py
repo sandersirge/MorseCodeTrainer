@@ -178,20 +178,47 @@ class TestTranslationPresenterCheckAnswer:
 			presenter.check_answer("test")
 
 
-class TestTranslationPresenterAudioPath:
-	"""Tests for audio_path method."""
+class TestTranslationPresenterAudioMorse:
+	"""Tests for audio_morse method."""
 
-	def test_audio_path_returns_path(self, presenter, mock_morse_session):
+	def test_audio_morse_is_prompt_in_morse_mode(self, presenter, mock_morse_session):
 		presenter.start("morse_to_text")
-		mock_morse_session.current_prompt.return_value = "HELLO"
-		path = presenter.audio_path()
-		# Note: HELLO is in text mode, so key is "HELLO"
-		# But mock returns ".... . .-.. .-.. ---", so we need to check properly
-		# The audio_map has "HELLO" mapped
-		assert path is None or isinstance(path, str)
+		assert presenter.audio_morse() == ".... . .-.. .-.. ---"
 
-	def test_audio_path_without_start_returns_none(self, presenter):
-		assert presenter.audio_path() is None
+	def test_no_audio_in_text_mode(self, presenter):
+		presenter.start("text_to_morse")
+		assert presenter.audio_morse() is None
+
+	def test_audio_morse_without_start_returns_none(self, presenter):
+		assert presenter.audio_morse() is None
+
+
+class TestCheckAnswerWordGaps:
+	"""Word gaps can be typed as 3 spaces, a slash or a newline."""
+
+	@pytest.mark.parametrize(
+		"answer",
+		[
+			".... ..   -- --- --",
+			".... .. / -- --- --",
+			".... ..\n-- --- --",
+			"  .... ..    -- --- --  ",
+		],
+	)
+	def test_word_gap_styles_accepted(self, presenter, mock_text_session, answer):
+		presenter.start("text_to_morse")
+		mock_text_session.current_answer.return_value = ".... ..   -- --- --"
+		assert presenter.check_answer(answer)[0] is True
+
+	def test_missing_word_gap_is_wrong(self, presenter, mock_text_session):
+		presenter.start("text_to_morse")
+		mock_text_session.current_answer.return_value = ".... ..   -- --- --"
+		assert presenter.check_answer(".... .. -- --- --")[0] is False
+
+	def test_text_answer_ignores_extra_spaces(self, presenter, mock_morse_session):
+		presenter.start("morse_to_text")
+		mock_morse_session.current_answer.return_value = "Tartu linn"
+		assert presenter.check_answer("  tartu   LINN ")[0] is True
 
 
 class TestTranslationPresenterTitleForMode:
@@ -232,7 +259,7 @@ class TestTranslationState:
 			progress_step=50.0,
 			is_first=True,
 			is_last=False,
-			audio_path=None,
+			audio_morse=None,
 			progress_text="0.0% läbitud",
 			has_previous=False,
 			next_label="Järgmine",

@@ -1,8 +1,8 @@
 """Infrastructure/service helpers for the Morse code trainer."""
 
-from .audio_cache import AudioCache
+from .audio_player import AudioPlayer
 from .audio_provider import pygame
-from .audio_settings import AudioSettings
+from .audio_settings import AudioSettings, AudioSettingsStore
 from .data_provider import (
 	FlashcardResources,
 	TranslationResources,
@@ -12,8 +12,9 @@ from .data_provider import (
 )
 
 __all__ = [
-	"AudioCache",
+	"AudioPlayer",
 	"AudioSettings",
+	"AudioSettingsStore",
 	"FlashcardResources",
 	"TranslationResources",
 	"create_flashcard_resources",

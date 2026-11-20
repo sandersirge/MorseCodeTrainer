@@ -3,13 +3,54 @@
 from __future__ import annotations
 
 import random
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 
 from ..exceptions import MismatchedDataError, SessionInvalidStateError
+from ..utils.morse_translator import split_morse_words
 
-_WORD_PROMPT_INDICES = {0, 1, 2, 3, 4, 10, 11, 12, 13, 14}
-_SPLIT_AS_WORDS_THRESHOLD = 10
+_MORSE_ONLY = re.compile(r"[.\-\s/]+")
+_FULL_POINTS = 1.0
+_HALF_POINTS = 0.5
+_HALF_POINTS_FROM_ACCURACY = 0.5
+
+
+def answer_units(answer: str, *, morse: bool) -> list[str]:
+	"""Split an answer into the units that get compared.
+
+	Morse answers are compared letter by letter (word gaps are not scored, so
+	spacing style doesn't matter). Text answers are compared character by
+	character, ignoring case and repeated whitespace.
+	"""
+
+	if morse:
+		return [letter for word in split_morse_words(answer) for letter in word]
+	return list(" ".join(answer.upper().split()))
+
+
+def score_answer(expected: str, given: str, *, morse: bool) -> float:
+	"""1 point for an exact answer, ½ for at least half right, otherwise 0.
+
+	"Half right" uses an alignment (difflib), so one missing or extra letter
+	only costs that letter instead of shifting everything after it.
+	"""
+
+	expected_units = answer_units(expected, morse=morse)
+	if not expected_units:
+		return 0.0
+	given_units = answer_units(given, morse=morse)
+	if given_units == expected_units:
+		return _FULL_POINTS
+	matcher = SequenceMatcher(None, expected_units, given_units, autojunk=False)
+	matched = sum(block.size for block in matcher.get_matching_blocks())
+	accuracy = matched / max(len(expected_units), len(given_units))
+	return _HALF_POINTS if accuracy >= _HALF_POINTS_FROM_ACCURACY else 0.0
+
+
+def is_morse(text: str) -> bool:
+	return bool(text.strip()) and _MORSE_ONLY.fullmatch(text) is not None
 
 
 @dataclass
@@ -49,11 +90,27 @@ class TestSummary:
 class TestSession:
 	"""Manages question order, scoring, and summaries for the timed test."""
 
-	def __init__(self, prompts: Sequence[str], answers: Sequence[str]) -> None:
+	def __init__(
+		self,
+		prompts: Sequence[str],
+		answers: Sequence[str],
+		categories: Sequence[str] | None = None,
+	) -> None:
+		"""*categories* ("word"/"sentence") drive the speed statistics.
+
+		When omitted, prompts of one or two words count as "word".
+		"""
 		if len(prompts) != len(answers):
 			raise MismatchedDataError("TestSession requires equal numbers of prompts and answers")
+		if categories is not None and len(categories) != len(prompts):
+			raise MismatchedDataError("TestSession requires one category per prompt")
 		self._prompts = list(prompts)
 		self._answers = list(answers)
+		self._categories = (
+			list(categories)
+			if categories is not None
+			else [_infer_category(prompt, answer) for prompt, answer in zip(prompts, answers)]
+		)
 		self._total_questions = len(self._prompts)
 		self._order: list[int] = []
 		self._position: int = -1
@@ -142,37 +199,7 @@ class TestSession:
 
 	def _build_response(self, index: int, given: str, elapsed: float) -> TestResponse:
 		expected = self._answers[index]
-		category = "word" if index in _WORD_PROMPT_INDICES else "sentence"
-
-		if index < _SPLIT_AS_WORDS_THRESHOLD:
-			expected_units = expected.split(" ")
-			given_units = given.split(" ")
-		else:
-			expected_units = list(expected)
-			given_units = list(given)
-
-		correct = 0
-		for position, token in enumerate(given_units):
-			if (
-				expected_units
-				and position < len(expected_units)
-				and token == expected_units[position]
-			):
-				correct += 1
-			if expected_units and position == len(expected_units) - 1:
-				break
-
-		if not expected_units:
-			score = 0.0
-		else:
-			accuracy = round(correct / len(expected_units), 1) * 100
-			if 0 <= accuracy < 50:
-				score = 0.0
-			elif 50 <= accuracy < 100:
-				score = 0.5
-			else:
-				score = 1.0
-
+		score = score_answer(expected, given, morse=is_morse(expected))
 		return TestResponse(
 			index=index,
 			prompt=self._prompts[index],
@@ -180,7 +207,7 @@ class TestSession:
 			given=given,
 			elapsed=elapsed,
 			score=score,
-			category=category,
+			category=self._categories[index],
 		)
 
 	def summary(self) -> TestSummary:
@@ -212,6 +239,11 @@ class TestSession:
 			word_speed=word_speed,
 			sentence_speed=sentence_speed,
 		)
+
+
+def _infer_category(prompt: str, answer: str) -> str:
+	text = answer if is_morse(prompt) else prompt
+	return "word" if len(text.split()) <= 2 else "sentence"
 
 
 def _speed_from_times(entries: Sequence[float]) -> int:

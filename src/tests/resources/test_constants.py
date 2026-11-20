@@ -1,6 +1,7 @@
 """Tests for constants module integrity."""
 
 from src.main.python.resources import constants as consts
+from src.main.python.utils.morse_translator import convert_text_to_morse
 
 
 class TestLetterMorsePairs:
@@ -79,54 +80,37 @@ class TestSymbolToMorseMap:
 			assert all(c in ".-" for c in code)
 
 
-class TestAudioMaps:
-	"""Tests for audio mapping structures."""
+class TestTranslationSentences:
+	"""Tests for translation exercise data."""
 
-	def test_letter_audio_map_paths_are_wav(self):
-		for path in consts.LETTER_AUDIO_MAP.values():
-			assert path.endswith(".wav")
+	def test_has_20_sentences(self):
+		assert len(consts.TRANSLATION_SENTENCES) == 20
 
-	def test_number_audio_map_paths_are_wav(self):
-		for path in consts.NUMBER_AUDIO_MAP.values():
-			assert path.endswith(".wav")
-
-	def test_symbol_audio_map_paths_are_wav(self):
-		for path in consts.SYMBOL_AUDIO_MAP.values():
-			assert path.endswith(".wav")
+	def test_every_sentence_is_translatable(self):
+		# Every character must exist in the Morse tables (catches typos and
+		# characters the trainer can't send).
+		for sentence in consts.TRANSLATION_SENTENCES:
+			convert_text_to_morse(sentence)
 
 
-class TestTranslationSamples:
-	"""Tests for translation sample data."""
-
-	def test_text_and_morse_samples_equal_length(self):
-		assert len(consts.TRANSLATION_TEXT_SAMPLES) == len(consts.TRANSLATION_MORSE_SAMPLES)
-
-	def test_has_20_samples(self):
-		assert len(consts.TRANSLATION_TEXT_SAMPLES) == 20
-
-	def test_morse_samples_valid(self):
-		for morse in consts.TRANSLATION_MORSE_SAMPLES:
-			# Morse can contain dots, dashes, spaces, and newlines
-			for char in morse:
-				assert char in ".- \n", f"Invalid char '{char}' in morse sample"
-
-
-class TestTestData:
-	"""Tests for test prompts and answers."""
-
-	def test_prompts_and_answers_equal_length(self):
-		assert len(consts.TEST_TEXT_PROMPTS) == len(consts.TEST_MORSE_ANSWERS)
+class TestTestItems:
+	"""Tests for test question data."""
 
 	def test_has_20_items(self):
-		assert len(consts.TEST_TEXT_PROMPTS) == 20
+		assert len(consts.TEST_ITEMS) == 20
 
-	def test_prompts_are_strings(self):
-		for prompt in consts.TEST_TEXT_PROMPTS:
-			assert isinstance(prompt, str)
+	def test_items_have_valid_direction_and_category(self):
+		for item in consts.TEST_ITEMS:
+			assert item.direction in ("text_to_morse", "morse_to_text")
+			assert item.category in ("word", "sentence")
 
-	def test_answers_are_strings(self):
-		for answer in consts.TEST_MORSE_ANSWERS:
-			assert isinstance(answer, str)
+	def test_both_directions_and_categories_present(self):
+		combos = {(item.direction, item.category) for item in consts.TEST_ITEMS}
+		assert len(combos) == 4
+
+	def test_every_item_is_translatable(self):
+		for item in consts.TEST_ITEMS:
+			convert_text_to_morse(item.text)
 
 
 class TestKeyViews:

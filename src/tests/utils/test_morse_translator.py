@@ -88,16 +88,15 @@ class TestConvertMorseToText:
 		result = convert_morse_to_text(".-")
 		assert result == "A"
 
-	def test_word_capitalization(self):
-		# First letter of each word is uppercase, rest lowercase
+	def test_output_is_uppercase(self):
+		# Morse has no letter case, so decoding always gives uppercase
 		result = convert_morse_to_text(".... ..")
-		assert result == "Hi"
+		assert result == "HI"
 
 	def test_multiple_words(self):
 		# Triple space separates words
 		result = convert_morse_to_text(".... ..   -- --- --")
-		# "HI MOM" but with capitalization: "Hi Mom"
-		assert result == "Hi Mom"
+		assert result == "HI MOM"
 
 	def test_number(self):
 		assert convert_morse_to_text(".----") == "1"
@@ -117,8 +116,7 @@ class TestConvertMorseToText:
 
 	def test_estonian_a_umlaut_after_letter(self):
 		result = convert_morse_to_text(".- .-.-")
-		# Second character is lowercase
-		assert result == "Aä"
+		assert result == "AÄ"
 
 	def test_estonian_o_umlaut(self):
 		result = convert_morse_to_text("---.")
@@ -138,7 +136,7 @@ class TestConvertMorseToText:
 
 	def test_single_space_separates_letters(self):
 		result = convert_morse_to_text(".- -...")
-		assert result == "Ab"
+		assert result == "AB"
 
 	def test_triple_space_separates_words(self):
 		result = convert_morse_to_text(".-   -...")
@@ -152,24 +150,22 @@ class TestRoundTrip:
 		original = "HELLO"
 		morse = convert_text_to_morse(original)
 		back = convert_morse_to_text(morse)
-		# Capitalization: "Hello" (first upper, rest lower)
-		assert back == "Hello"
+		assert back == "HELLO"
 
 	def test_roundtrip_multiple_words(self):
 		original = "HELLO WORLD"
 		morse = convert_text_to_morse(original)
 		back = convert_morse_to_text(morse)
-		assert back == "Hello World"
+		assert back == "HELLO WORLD"
 
 	def test_roundtrip_with_numbers(self):
 		original = "ABC123"
 		morse = convert_text_to_morse(original)
 		back = convert_morse_to_text(morse)
-		# Numbers don't have case
-		assert back == "Abc123"
+		assert back == "ABC123"
 
 	def test_roundtrip_estonian_word(self):
 		original = "TÄNAV"  # street in Estonian
 		morse = convert_text_to_morse(original)
 		back = convert_morse_to_text(morse)
-		assert back == "Tänav"
+		assert back == "TÄNAV"

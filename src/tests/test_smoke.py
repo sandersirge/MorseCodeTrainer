@@ -16,9 +16,6 @@ class TestResourceImports:
 	def test_morse_data_importable(self) -> None:
 		from src.main.python.resources import morse_data  # noqa: F401
 
-	def test_audio_data_importable(self) -> None:
-		from src.main.python.resources import audio_data  # noqa: F401
-
 	def test_exercise_data_importable(self) -> None:
 		from src.main.python.resources import exercise_data  # noqa: F401
 
@@ -40,27 +37,11 @@ class TestResourceImports:
 			assert letter in LETTER_TO_MORSE_MAP
 			assert letter.upper() in LETTER_TO_MORSE_MAP
 
-	def test_audio_maps_non_empty(self) -> None:
-		from src.main.python.resources.audio_data import (
-			LETTER_AUDIO_MAP,
-			NUMBER_AUDIO_MAP,
-			SYMBOL_AUDIO_MAP,
-		)
+	def test_exercise_data_non_empty(self) -> None:
+		from src.main.python.resources.exercise_data import TEST_ITEMS, TRANSLATION_SENTENCES
 
-		assert len(LETTER_AUDIO_MAP) > 0
-		assert len(NUMBER_AUDIO_MAP) > 0
-		assert len(SYMBOL_AUDIO_MAP) > 0
-
-	def test_exercise_samples_equal_length(self) -> None:
-		from src.main.python.resources.exercise_data import (
-			TEST_MORSE_ANSWERS,
-			TEST_TEXT_PROMPTS,
-			TRANSLATION_MORSE_SAMPLES,
-			TRANSLATION_TEXT_SAMPLES,
-		)
-
-		assert len(TRANSLATION_TEXT_SAMPLES) == len(TRANSLATION_MORSE_SAMPLES)
-		assert len(TEST_TEXT_PROMPTS) == len(TEST_MORSE_ANSWERS)
+		assert len(TRANSLATION_SENTENCES) > 0
+		assert len(TEST_ITEMS) > 0
 
 
 @pytest.mark.smoke

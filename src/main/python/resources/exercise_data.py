@@ -1,19 +1,40 @@
-"""Training exercise sample data for translation and test modes."""
+"""Training exercise data for the translation and test modes.
+
+Only plain text is stored here. The Morse versions are generated from it with
+the translator (see ``services.data_provider``), so prompts and answers can
+never disagree with each other.
+"""
 
 from __future__ import annotations
 
-TRANSLATION_TEXT_SAMPLES = [
+from dataclasses import dataclass
+from typing import Literal
+
+Direction = Literal["text_to_morse", "morse_to_text"]
+Category = Literal["word", "sentence"]
+
+
+@dataclass(frozen=True)
+class TestItemData:
+	"""One test question: *text* is shown as-is or as Morse depending on *direction*."""
+
+	text: str
+	direction: Direction
+	category: Category
+
+
+TRANSLATION_SENTENCES: tuple[str, ...] = (
 	"Programmeerimine",
 	"Morsekood",
 	"Marcus Kommussaar",
 	"Sander Sirge",
 	"Tartu linn",
-	"Tartu Ylikool",
+	"Tartu Ülikool",
 	"2 valget kassi",
 	"1632",
 	"Must & valge koer",
 	"Delta keskus",
-	"Tartu Ylikool asutati aastal 1632.",
+	"Tartu Ülikool asutati aastal 1632.",
 	"Programmeerimine on eriti lahe!",
 	"Kas sinule meeldib Pythoni keel?",
 	"(x + y - z) = 420",
@@ -23,85 +44,39 @@ TRANSLATION_TEXT_SAMPLES = [
 	"Kellegi arvutis jookseb 875 protsessi.",
 	'"See on tsitaat, vist": Sander Sirge 2023',
 	"Google'i 4. kvartali tulu oli 75,33 mld dollarit.",
-]
+)
 
-TRANSLATION_MORSE_SAMPLES = [
-	".--. .-. --- --. .-. .- -- -- . . .-. .. -- .. -. .",
-	"-- --- .-. ... . -.- --- --- -..",
-	"-- .- .-. -.- ..- ...   -.- --- -- -- ..- ... ... .- .- .-.",
-	"... .- -. -.. . .-.   ... .. .-. --. .",
-	"- .- .-. - ..-   .-.. .. -. -.",
-	"- .- .-. - ..-   -.-- .-.. .. -.- --- --- .-..",
-	"..---   ...- .- .-.. --. . -   -.- .- ... ... ..",
-	".---- -.... ...-- ..---",
-	"-- ..- ... -   .-...   ...- .- .-.. --. .   -.- --- . .-.",
-	"-.. . .-.. - .-   -.- . ... -.- ..- ...",
-	"- .- .-. - ..-   -.-- .-.. .. -.- --- --- .-..   .- ... ..- - .- - ..\n.- .- ... - .- .-..   .---- -.... ...-- ..--- .-.-.-",
-	".--. .-. --- --. .-. .- -- -- . . .-. .. -- .. -. .\n--- -.   . .-. .. - ..   .-.. .- .... . -.-.--",
-	"-.- .- ...   ... .. -. ..- .-.. .   -- . . .-.. -.. .. -...\n.--. -.-- - .... --- -. ..   -.- . . .-.. ..--..",
-	"-.--. -..-   .-.-.   -.--   -....-   --.. -.--.-   -...-   ....- ..--- -----",
-	"-- . .. .   . -- .- .. .-..   . ..   --- .-.. .\n-- --- .-. ... . -.- --- --- -.. .--.-. -- --- .-. ... . -.- --- --- -.. .-.-.- -.-. --- --",
-	"-- . .. .   .--. .-. --- .--- . -.- - .. -.- --- --- -..   --- -.\n--. .-. --- .--- . -.- - -....- -- --- .-. ... . -.- --- --- -.. .-.-.- .--. -.--",
-	".--. .-. .- -.- - .. -.- ..- -- .. -..   - ..- .-.. . ...- .- -..\n... ..- ..- .-. . -.- ...   -.- .- ... ..- -.- ... .-.-.-",
-	"-.- . .-.. .-.. . --. ..   .- .-. ...- ..- - .. ...   .--- --- --- -.- ... . -...\n---.. --... .....   .--. .-. --- - ... . ... ... .. .-.-.-",
-	".-..-. ... . .   --- -.   - ... .. - .- .- - --..--   ...- .. ... - .-..-. ---...\n... .- -. -.. . .-.   ... .. .-. --. .   ..--- ----- ..--- ...--",
-	"--. --- --- --. .-.. . .----. ..   ....- .-.-.-   -.- ...- .- .-. - .- .-.. ..\n- ..- .-.. ..-   --- .-.. ..   --... ..... --..-- ...-- ...--   -- .-.. -..\n-.. --- .-.. .- .-. .. - .-.-.-",
-]
-
-TEST_TEXT_PROMPTS = [
-	"Programmeerimine",
-	"Morsekood",
-	"Linux",
-	"Windows",
-	"Android",
-	"Tartu Ylikool asutati aastal 1632.",
-	"Google'i 4. kvartali tulu oli 75,33 mld dollarit",
-	"Apple on parem kui Android?",
-	"Diskreetne matemaatika on raske!",
-	"Informaatika eriala on ainus sobiv valik",
-	"- .- .-. - ..-   -.-- .-.. .. -.- --- --- .-..",
-	"-- ..- ... -   .-...   ...- .- .-.. --. .   -.- --- . .-.",
-	"-.- . .-. -. . .-..",
-	".--- .- ...- .- ... -.-. .-. .. .--. -",
-	"-.- .- ... ..- - .- .--- .- .-.. .. .. -.. . ...",
-	"-.- . .-.. .-.. . --. ..   .- .-. ...- ..- - .. ...   .--- --- --- -.- ... . -...\
----.. --... .....   .--. .-. --- - ... . ... ... .. .-.-.-",
-	".--. .-. .- -.- - .. -.- ..- -- .. -..   - ..- .-.. . ...- .- -..\
-... ..- ..- .-. . -.- ...   -.- .- ... ..- -.- ... .-.-.-",
-	"..- .-. .- .-..   --- -.   .- .- ... - .- - . .-..\
-.---- ----. ..... ----. -....- .---- ----. --... .----\
-- --- --- -.. . - ..- -..   . .-.. . -.- - .-. --- -. .- .-. ...- ..- - .. - .\
-... . . .-. .. .- .-.-.-",
-	"-.- .- ...   ... .-   -.- --- .-. -.. .- ... .. -..   - . ... - .. -.- ... ..--..",
-	". -.. ..-   - . .. .-.. .   . -.- ... .- -- .. .-.. -.-.--",
-]
-
-TEST_MORSE_ANSWERS = [
-	".--. .-. --- --. .-. .- -- -- . . .-. .. -- .. -. .",
-	"-- --- .-. ... . -.- --- --- -..",
-	".-.. .. -. ..- -..-",
-	".-- .. -. -.. --- .-- ...",
-	".- -. -.. .-. --- .. -..",
-	"- .- .-. - ..-   -.-- .-.. .. -.- --- --- .-..   .- ... ..- - .- - ..   .- .- ... - .- .-..   .---- -.... ...-- ..--- .-.-.-",
-	"--. --- --- --. .-.. . .----. ..   ....- .-.-.-   -.- ...- .- .-. - .- .-.. ..   - ..- .-.. ..-   --- .-.. ..   --... ..... --..-- ...-- ...--   -- .-.. -..   -.. --- .-.. .- .-. .. -",
-	".- .--. .--. .-.. .   --- -.   .--. .- .-. . --   -.- ..- ..   .- -. -.. .-. --- .. -.. ..--..",
-	"-.. .. ... -.- .-. . . - -. .   -- .- - . -- .- .- - .. -.- .-   --- -.   .-. .- ... -.- . -.-.--",
-	".. -. ..-. --- .-. -- .- .- - .. -.- .-   . .-. .. .- .-.. .-   --- -.   .- .. -. ..- ...   ... --- -... .. ...-   ...- .- .-.. .. -.-",
-	"Tartu ylikool",
-	"Must & valge koer",
-	"Kernel",
-	"Javascript",
-	"Kasutajaliides",
-	"Kellegi arvutis jookseb 875 protsessi.",
-	"Praktikumid tulevad suureks kasuks.",
-	"Ural on aastatel 1959-1971 toodetud elektronarvutite seeria.",
-	"Kas sa kordasid testiks?",
-	"Edu teile eksamil!",
-]
+TEST_ITEMS: tuple[TestItemData, ...] = (
+	# Text shown, answer typed in Morse
+	TestItemData("Programmeerimine", "text_to_morse", "word"),
+	TestItemData("Morsekood", "text_to_morse", "word"),
+	TestItemData("Linux", "text_to_morse", "word"),
+	TestItemData("Windows", "text_to_morse", "word"),
+	TestItemData("Android", "text_to_morse", "word"),
+	TestItemData("Tartu Ülikool asutati aastal 1632.", "text_to_morse", "sentence"),
+	TestItemData("Google'i 4. kvartali tulu oli 75,33 mld dollarit", "text_to_morse", "sentence"),
+	TestItemData("Apple on parem kui Android?", "text_to_morse", "sentence"),
+	TestItemData("Diskreetne matemaatika on raske!", "text_to_morse", "sentence"),
+	TestItemData("Informaatika eriala on ainus sobiv valik", "text_to_morse", "sentence"),
+	# Morse shown, answer typed as text
+	TestItemData("Tartu Ülikool", "morse_to_text", "word"),
+	TestItemData("Must & valge koer", "morse_to_text", "word"),
+	TestItemData("Kernel", "morse_to_text", "word"),
+	TestItemData("Javascript", "morse_to_text", "word"),
+	TestItemData("Kasutajaliides", "morse_to_text", "word"),
+	TestItemData("Kellegi arvutis jookseb 875 protsessi.", "morse_to_text", "sentence"),
+	TestItemData("Praktikumid tulevad suureks kasuks.", "morse_to_text", "sentence"),
+	TestItemData(
+		"Ural on aastatel 1959-1971 toodetud elektronarvutite seeria.", "morse_to_text", "sentence"
+	),
+	TestItemData("Kas sa kordasid testiks?", "morse_to_text", "sentence"),
+	TestItemData("Edu teile eksamil!", "morse_to_text", "sentence"),
+)
 
 __all__ = [
-	"TRANSLATION_TEXT_SAMPLES",
-	"TRANSLATION_MORSE_SAMPLES",
-	"TEST_TEXT_PROMPTS",
-	"TEST_MORSE_ANSWERS",
+	"Category",
+	"Direction",
+	"TEST_ITEMS",
+	"TRANSLATION_SENTENCES",
+	"TestItemData",
 ]

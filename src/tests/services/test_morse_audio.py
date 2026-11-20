@@ -1,154 +1,111 @@
-"""Tests for morse_audio service."""
+"""Tests for Morse audio rendering (in memory, no temp files)."""
 
-from pathlib import Path
+import io
+import wave
 
 import pytest
 
 from src.main.python.exceptions import NoAudioContentError, UnsupportedMorseSymbolError
-from src.main.python.services.morse_audio import _parse_morse_sequence, synthesize_morse_audio
+from src.main.python.services.audio_settings import AudioSettings
+from src.main.python.services.morse_audio import (
+	morse_events,
+	render_samples,
+	render_wav_bytes,
+	save_wav,
+	timing_seconds,
+)
+
+STANDARD = AudioSettings(wpm=20, effective_wpm=20)  # unit = 60 ms, no Farnsworth
+UNIT = 0.06
 
 
-class TestParseMorseSequence:
-	"""Tests for _parse_morse_sequence function."""
+class TestTiming:
+	def test_standard_spacing_is_1_3_7(self):
+		unit, letter_gap, word_gap = timing_seconds(STANDARD)
+		assert unit == pytest.approx(UNIT)
+		assert letter_gap == pytest.approx(3 * UNIT)
+		assert word_gap == pytest.approx(7 * UNIT)
 
-	def test_empty_string_returns_empty(self):
-		result = list(_parse_morse_sequence(""))
-		assert result == []
+	def test_farnsworth_stretches_gaps_not_letters(self):
+		unit, letter_gap, word_gap = timing_seconds(AudioSettings(wpm=20, effective_wpm=10))
+		assert unit == pytest.approx(UNIT)
+		assert letter_gap > 3 * UNIT
+		assert word_gap > 7 * UNIT
+		assert word_gap / letter_gap == pytest.approx(7 / 3)
 
-	def test_whitespace_only_returns_empty(self):
-		result = list(_parse_morse_sequence("   "))
-		assert result == []
+	def test_farnsworth_hits_effective_speed(self):
+		# "PARIS " is the standard word. With Farnsworth its total duration
+		# (including the trailing word gap) must match the effective WPM.
+		settings = AudioSettings(wpm=20, effective_wpm=10)
+		events = morse_events(".--. .- .-. .. ...", settings)
+		_, _, word_gap = timing_seconds(settings)
+		total = sum(seconds for _, seconds in events) + word_gap
+		assert total == pytest.approx(60 / 10, rel=0.01)
 
-	def test_single_dot_returns_tone_1_unit(self):
-		result = list(_parse_morse_sequence("."))
-		assert result == [("tone", 1)]
 
-	def test_single_dash_returns_tone_3_units(self):
-		result = list(_parse_morse_sequence("-"))
-		assert result == [("tone", 3)]
+class TestEvents:
+	def test_empty_raises(self):
+		with pytest.raises(NoAudioContentError):
+			morse_events("", STANDARD)
 
-	def test_letter_a_returns_dot_gap_dash(self):
-		result = list(_parse_morse_sequence(".-"))
-		expected = [
-			("tone", 1),  # dot
-			("gap", 1),  # gap between symbols
-			("tone", 3),  # dash
-		]
-		assert result == expected
+	def test_whitespace_only_raises(self):
+		with pytest.raises(NoAudioContentError):
+			morse_events("   \n ", STANDARD)
+
+	def test_letter_a_is_dot_gap_dash(self):
+		events = morse_events(".-", STANDARD)
+		assert [kind for kind, _ in events] == [True, False, True]
+		assert [seconds for _, seconds in events] == pytest.approx([UNIT, UNIT, 3 * UNIT])
 
 	def test_two_letters_have_letter_gap(self):
-		# A B = .- -...
-		result = list(_parse_morse_sequence(".- -..."))
-		# Should have a gap of 3 units between letters
-		assert ("gap", 3) in result
+		events = morse_events(". .", STANDARD)
+		assert events[1][0] is False
+		assert events[1][1] == pytest.approx(3 * UNIT)
 
-	def test_two_words_have_word_gap(self):
-		# "A A" with triple space word separator
-		result = list(_parse_morse_sequence(".-   .-"))
-		# Should have a gap of 7 units between words
-		assert ("gap", 7) in result
+	@pytest.mark.parametrize("separator", ["   ", "\n", " / "])
+	def test_word_gap_from_spaces_newline_or_slash(self, separator):
+		events = morse_events(f".{separator}.", STANDARD)
+		assert events[1][1] == pytest.approx(7 * UNIT)
 
 	def test_invalid_symbol_raises(self):
 		with pytest.raises(UnsupportedMorseSymbolError):
-			list(_parse_morse_sequence(".-x"))
+			morse_events(".x-", STANDARD)
 
 
-class TestSynthesizeMorseAudio:
-	"""Tests for synthesize_morse_audio function."""
+class TestSamples:
+	def test_length_matches_timing(self):
+		samples = render_samples(".-", STANDARD, sample_rate=8000)
+		assert len(samples) == pytest.approx(5 * UNIT * 8000, abs=3)
 
-	def test_empty_morse_raises(self):
-		with pytest.raises(NoAudioContentError):
-			synthesize_morse_audio("")
+	def test_tone_fades_in_and_out(self):
+		# A hard start/stop is heard as a click; the first and last samples
+		# of a tone must be (near) silent.
+		samples = render_samples("-", STANDARD, sample_rate=44100)
+		peak = max(abs(s) for s in samples)
+		assert abs(samples[0]) < peak * 0.05
+		assert abs(samples[-1]) < peak * 0.05
 
-	def test_whitespace_morse_raises(self):
-		with pytest.raises(NoAudioContentError):
-			synthesize_morse_audio("   ")
+	def test_volume_scales_amplitude(self):
+		quiet = max(render_samples("-", STANDARD.with_volume(0.2), 8000))
+		loud = max(render_samples("-", STANDARD.with_volume(0.8), 8000))
+		assert loud > 3 * quiet
 
-	def test_returns_path(self):
-		result = synthesize_morse_audio(".-")
-		assert isinstance(result, Path)
-		# Cleanup
-		if result.exists():
-			result.unlink()
+	def test_zero_volume_is_silent(self):
+		assert max(abs(s) for s in render_samples(".", STANDARD.with_volume(0.0), 8000)) == 0
 
-	def test_creates_wav_file(self):
-		result = synthesize_morse_audio(".-")
-		assert result.exists()
-		assert result.suffix == ".wav"
-		# Cleanup
-		result.unlink()
 
-	def test_wav_file_is_valid(self):
-		import wave
-
-		result = synthesize_morse_audio(".-")
-		with wave.open(str(result), "rb") as wav:
+class TestWav:
+	def test_wav_bytes_are_valid(self):
+		data = render_wav_bytes("... --- ...", STANDARD, sample_rate=22050)
+		with wave.open(io.BytesIO(data)) as wav:
 			assert wav.getnchannels() == 1
 			assert wav.getsampwidth() == 2
-			assert wav.getframerate() == 44100
-		# Cleanup
-		result.unlink()
-
-	def test_custom_sample_rate(self):
-		import wave
-
-		result = synthesize_morse_audio(".-", sample_rate=22050)
-		with wave.open(str(result), "rb") as wav:
 			assert wav.getframerate() == 22050
-		# Cleanup
-		result.unlink()
+			assert wav.getnframes() > 0
 
-	def test_volume_clamps_to_max(self):
-		# Should not raise, just clamp
-		result = synthesize_morse_audio(".-", volume=1.5)
-		assert result.exists()
-		result.unlink()
-
-	def test_volume_clamps_to_min(self):
-		# Should not raise, just clamp
-		result = synthesize_morse_audio(".-", volume=-0.5)
-		assert result.exists()
-		result.unlink()
-
-	def test_file_in_temp_directory(self):
-		import tempfile
-
-		result = synthesize_morse_audio(".-")
-		assert str(result).startswith(tempfile.gettempdir())
-		result.unlink()
-
-	def test_file_has_unique_name(self):
-		result1 = synthesize_morse_audio(".-")
-		result2 = synthesize_morse_audio(".-")
-		assert result1 != result2
-		result1.unlink()
-		result2.unlink()
-
-
-class TestSynthesizeMorseAudioTiming:
-	"""Tests for timing calculations in audio synthesis."""
-
-	def test_longer_duration_creates_larger_file(self):
-		# Longer unit duration should create more samples
-		short = synthesize_morse_audio(".-", unit_duration_ms=50)
-		long = synthesize_morse_audio(".-", unit_duration_ms=150)
-
-		short_size = short.stat().st_size
-		long_size = long.stat().st_size
-
-		assert long_size > short_size
-
-		short.unlink()
-		long.unlink()
-
-	def test_complex_morse_code(self):
-		# SOS = ... --- ...
-		result = synthesize_morse_audio("... --- ...")
-		assert result.exists()
-		result.unlink()
-
-	def test_word_separation(self):
-		# HELLO WORLD with word gap
-		result = synthesize_morse_audio(".... . .-.. .-.. ---   .-- --- .-. .-.. -..")
-		assert result.exists()
-		result.unlink()
+	def test_save_wav_adds_extension_and_creates_folder(self, tmp_path):
+		target = save_wav(tmp_path / "sub" / "clip", ".-", STANDARD)
+		assert target.suffix == ".wav"
+		assert target.is_file()
+		with wave.open(str(target)) as wav:
+			assert wav.getnframes() > 0

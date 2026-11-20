@@ -10,15 +10,13 @@ import customtkinter as ctk
 
 from .theme import (
 	FONT_FAMILY_DEFAULT,
-	FONT_FAMILY_MONO,
-	FONT_FAMILY_MONO_ALT,
-	FONT_FAMILY_SEMIBOLD,
 	FONT_SIZE_4XL,
 	FONT_SIZE_LG,
 	FONT_SIZE_MD,
 	FONT_SIZE_SM,
 	FONT_SIZE_XL,
 	get_colors,
+	resolve_font_family,
 )
 
 # ---------------------------------------------------------------------------
@@ -68,6 +66,7 @@ def setup_keyboard_navigation(widgets: list[ctk.CTkBaseClass]) -> None:
 		# Add Enter key binding for buttons
 		if isinstance(widget, ctk.CTkButton):
 			widget.bind("<Return>", lambda e, w=widget: _invoke_button(w))
+			widget.bind("<KP_Enter>", lambda e, w=widget: _invoke_button(w))
 			widget.bind("<space>", lambda e, w=widget: _invoke_button(w))
 
 
@@ -113,8 +112,13 @@ def add_focus_highlight(widget: ctk.CTkBaseClass, focus_color: str | None = None
 		except Exception:
 			pass
 
-	widget.bind("<FocusIn>", on_focus_in, add="+")
-	widget.bind("<FocusOut>", on_focus_out, add="+")
+	try:
+		widget.bind("<FocusIn>", on_focus_in, add="+")
+		widget.bind("<FocusOut>", on_focus_out, add="+")
+	except NotImplementedError:
+		# Some CTk widgets (e.g. CTkSegmentedButton) don't support bind();
+		# they simply go without the focus ring instead of aborting the build.
+		pass
 
 
 def bind_escape_to_back(root: ctk.CTk, callback: Callable[[], None]) -> str:
@@ -134,11 +138,14 @@ def unbind_escape(root: ctk.CTk, binding_id: str) -> None:
 # Font utilities
 
 
-def make_font(
-	*, size: int, weight: str = "normal", family: str = FONT_FAMILY_DEFAULT
-) -> ctk.CTkFont:
-	"""Return a configured CTkFont with the shared defaults."""
+def make_font(*, size: int, weight: str = "normal", family: str | None = None) -> ctk.CTkFont:
+	"""Return a configured CTkFont with the shared defaults.
 
+	*family* defaults to the best installed sans-serif font for this OS.
+	"""
+
+	if family is None:
+		family = resolve_font_family("sans")
 	normalized = weight.lower()
 	if normalized not in {"normal", "bold"}:
 		if normalized in {"semibold", "demibold", "medium"}:
@@ -176,28 +183,28 @@ def font_muted() -> ctk.CTkFont:
 
 
 def font_button() -> ctk.CTkFont:
-	"""Button text font (size 18, bold, semibold family)."""
-	return make_font(size=FONT_SIZE_MD, weight="bold", family=FONT_FAMILY_SEMIBOLD)
+	"""Button text font (size 18, bold)."""
+	return make_font(size=FONT_SIZE_MD, weight="bold")
 
 
 def font_button_large() -> ctk.CTkFont:
-	"""Large button text font (size 20, bold, semibold family)."""
-	return make_font(size=FONT_SIZE_LG, weight="bold", family=FONT_FAMILY_SEMIBOLD)
+	"""Large button text font (size 20, bold)."""
+	return make_font(size=FONT_SIZE_LG, weight="bold")
 
 
 def font_callout() -> ctk.CTkFont:
-	"""Callout/emphasis font (size 22, bold, semibold family)."""
-	return make_font(size=FONT_SIZE_XL, weight="bold", family=FONT_FAMILY_SEMIBOLD)
+	"""Callout/emphasis font (size 22, bold)."""
+	return make_font(size=FONT_SIZE_XL, weight="bold")
 
 
 def font_mono(size: int = FONT_SIZE_4XL) -> ctk.CTkFont:
-	"""Monospace font for morse/code display (Consolas, bold)."""
-	return make_font(size=size, weight="bold", family=FONT_FAMILY_MONO)
+	"""Bold monospace font for Morse display (best installed mono font)."""
+	return make_font(size=size, weight="bold", family=resolve_font_family("mono"))
 
 
 def font_timer() -> ctk.CTkFont:
-	"""Timer display font (size 24, bold, JetBrains Mono)."""
-	return make_font(size=24, weight="bold", family=FONT_FAMILY_MONO_ALT)
+	"""Timer display font (size 24, bold monospace)."""
+	return font_mono(24)
 
 
 # ---------------------------------------------------------------------------

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import atexit
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Protocol
 
 import customtkinter as ctk
 
@@ -12,9 +11,8 @@ from .controllers.translation_controller import TranslationPresenter
 from .controllers.translation_sandbox_controller import TranslationSandboxPresenter
 from .navigator import Navigator
 from .services import (
-	AudioCache,
-	FlashcardResources,
-	TranslationResources,
+	AudioPlayer,
+	AudioSettingsStore,
 	create_flashcard_resources,
 	create_test_session,
 	create_translation_resources,
@@ -26,6 +24,9 @@ from .views.home_view import HomeView, IntroductionView
 from .views.test_view import TestView
 from .views.translation_sandbox_view import TranslationSandboxView
 from .views.translation_view import TranslationView
+from .views.window import MainWindow
+
+APP_TITLE = "Morsekoodi õppimisprogramm"
 
 
 class Application:
@@ -35,14 +36,14 @@ class Application:
 		self,
 		root: ctk.CTk,
 		*,
-		pygame_module,
+		audio_player: AudioPlayer,
 		flashcard_presenter: FlashcardPresenter,
 		translation_presenter: TranslationPresenter,
 		test_presenter: TestPresenter,
 		sandbox_presenter: TranslationSandboxPresenter,
 	) -> None:
 		self.root = root
-		self.pygame = pygame_module
+		self.audio = audio_player
 		self.flashcard_presenter = flashcard_presenter
 		self.translation_presenter = translation_presenter
 		self.test_presenter = test_presenter
@@ -55,9 +56,9 @@ class Application:
 		self.translation_sandbox_view: TranslationSandboxView | None = None
 		self.test_view: TestView | None = None
 
-		self.root.title("Morsekoodi õppimisprogramm")
-		self.root.geometry("1920x1080")
-		self.root.configure(fg_color="#FFFDD0")
+		self.window = MainWindow(root)
+		self.window.setup(APP_TITLE)
+		self.root.protocol("WM_DELETE_WINDOW", self.quit)
 
 	# Wiring -----------------------------------------------------------------
 
@@ -84,8 +85,13 @@ class Application:
 		self.reset_test_state()
 
 	def run(self) -> None:
-		self.avalehekülg()
+		self.show_home()
 		self.root.mainloop()
+
+	def quit(self) -> None:
+		"""Close the audio device before the window, on every platform."""
+		self.audio.shutdown()
+		self.root.destroy()
 
 	# Shared helpers ---------------------------------------------------------
 
@@ -106,35 +112,38 @@ class Application:
 		if self.test_view is not None:
 			self.test_view.reset_state()
 
-	def avalehekülg(self) -> None:
+	def _reset_all(self) -> None:
 		self.reset_flashcard_state()
 		self.reset_translation_state()
 		self.reset_test_state()
+
+	# Navigation targets -----------------------------------------------------
+
+	def show_home(self) -> None:
+		self._reset_all()
 		if self.home_view is None:
 			return
 		if self.view_stack is not None:
 			self.view_stack.show("home")
 		self.home_view.show()
 
-	def tutvustus(self) -> None:
-		self.reset_flashcard_state()
-		self.reset_translation_state()
-		self.reset_test_state()
+	def show_introduction(self) -> None:
+		self._reset_all()
 		if self.introduction_view is None:
 			return
 		if self.view_stack is not None:
 			self.view_stack.show("introduction")
 		self.introduction_view.show()
 
-	def režiim1(self) -> None:
+	def show_flashcards(self) -> None:
 		if self.flashcard_view is None:
 			return
 		if self.view_stack is not None:
 			self.view_stack.show("flashcard")
 		self.flashcard_view.show_menu()
 
-	def režiim2(self) -> None:
-		self.pygame.mixer.music.stop()
+	def show_translation(self) -> None:
+		self.audio.stop()
 		self.reset_translation_state()
 		if self.translation_view is None:
 			return
@@ -142,15 +151,15 @@ class Application:
 			self.view_stack.show("translation")
 		self.translation_view.show_menu()
 
-	def translation_sandbox(self) -> None:
-		self.pygame.mixer.music.stop()
+	def show_translation_sandbox(self) -> None:
+		self.audio.stop()
 		if self.translation_sandbox_view is None:
 			return
 		if self.view_stack is not None:
 			self.view_stack.show("sandbox")
 		self.translation_sandbox_view.show()
 
-	def test(self) -> None:
+	def show_test(self) -> None:
 		if self.test_view is None:
 			return
 		if self.view_stack is not None:
@@ -165,18 +174,20 @@ class RootFactory(Protocol):
 @dataclass(frozen=True)
 class AppDependencies:
 	root: ctk.CTk
-	pygame_module: Any
+	audio_player: AudioPlayer
 	flashcard_presenter: FlashcardPresenter
 	translation_presenter: TranslationPresenter
 	test_presenter: TestPresenter
 	sandbox_presenter: TranslationSandboxPresenter
 
 
-def build_application(*, root_factory: RootFactory | None = None) -> Application:
-	deps = _build_dependencies(root_factory=root_factory)
+def build_application(
+	*, root_factory: RootFactory | None = None, pygame_module=None
+) -> Application:
+	deps = _build_dependencies(root_factory=root_factory, pygame_module=pygame_module)
 	app = Application(
 		deps.root,
-		pygame_module=deps.pygame_module,
+		audio_player=deps.audio_player,
 		flashcard_presenter=deps.flashcard_presenter,
 		translation_presenter=deps.translation_presenter,
 		test_presenter=deps.test_presenter,
@@ -184,13 +195,13 @@ def build_application(*, root_factory: RootFactory | None = None) -> Application
 	)
 
 	nav = Navigator(
-		home=app.avalehekülg,
-		introduction=app.tutvustus,
-		flashcards=app.režiim1,
-		translation=app.režiim2,
-		translation_sandbox=app.translation_sandbox,
-		test=app.test,
-		exit=deps.root.destroy,
+		home=app.show_home,
+		introduction=app.show_introduction,
+		flashcards=app.show_flashcards,
+		translation=app.show_translation,
+		translation_sandbox=app.show_translation_sandbox,
+		test=app.show_test,
+		exit=app.quit,
 		reset_translation=app.reset_translation_state,
 	)
 
@@ -200,85 +211,59 @@ def build_application(*, root_factory: RootFactory | None = None) -> Application
 	return app
 
 
-def _build_dependencies(*, root_factory: RootFactory | None = None) -> AppDependencies:
+def _build_dependencies(
+	*, root_factory: RootFactory | None = None, pygame_module=None
+) -> AppDependencies:
 	root_creator = root_factory or ctk.CTk
 	root = root_creator()
-	pygame.mixer.init()
 
-	translation_resources: TranslationResources = create_translation_resources()
+	settings_store = AudioSettingsStore()
+	audio_player = AudioPlayer(pygame_module or pygame, settings_store)
+	audio_player.start()
 
-	flashcard_resources: FlashcardResources = create_flashcard_resources()
-	audio_cache = AudioCache(static_map=flashcard_resources.audio_map)
-	atexit.register(audio_cache.cleanup)
-
-	translation_presenter = TranslationPresenter(
-		morse_session=translation_resources.morse_to_text,
-		text_session=translation_resources.text_to_morse,
-		audio_cache=audio_cache,
-	)
-
-	sandbox_presenter = TranslationSandboxPresenter()
-	test_presenter = TestPresenter(create_test_session())
-
-	flashcard_presenter = FlashcardPresenter(
-		sessions=flashcard_resources.sessions,
-		audio_cache=audio_cache,
-	)
+	translation_resources = create_translation_resources()
+	flashcard_resources = create_flashcard_resources()
 
 	return AppDependencies(
 		root=root,
-		pygame_module=pygame,
-		flashcard_presenter=flashcard_presenter,
-		translation_presenter=translation_presenter,
-		test_presenter=test_presenter,
-		sandbox_presenter=sandbox_presenter,
+		audio_player=audio_player,
+		flashcard_presenter=FlashcardPresenter(sessions=flashcard_resources.sessions),
+		translation_presenter=TranslationPresenter(
+			morse_session=translation_resources.morse_to_text,
+			text_session=translation_resources.text_to_morse,
+		),
+		test_presenter=TestPresenter(create_test_session()),
+		sandbox_presenter=TranslationSandboxPresenter(settings_store),
 	)
 
 
 def _build_views(nav: Navigator, deps: AppDependencies, view_stack: ViewStack) -> dict[str, object]:
-	flashcard_view = FlashcardView(
-		root=view_stack.register("flashcard"),
-		nav=nav,
-		pygame_module=deps.pygame_module,
-		presenter=deps.flashcard_presenter,
-	)
-
-	translation_view = TranslationView(
-		root=view_stack.register("translation"),
-		nav=nav,
-		pygame_module=deps.pygame_module,
-		presenter=deps.translation_presenter,
-	)
-
-	translation_sandbox_view = TranslationSandboxView(
-		root=view_stack.register("sandbox"),
-		nav=nav,
-		pygame_module=deps.pygame_module,
-		presenter=deps.sandbox_presenter,
-	)
-
-	test_view = TestView(
-		root=view_stack.register("test"),
-		nav=nav,
-		pygame_module=deps.pygame_module,
-		presenter=deps.test_presenter,
-	)
-
-	home_view = HomeView(
-		root=view_stack.register("home"),
-		nav=nav,
-	)
-
-	introduction_view = IntroductionView(
-		root=view_stack.register("introduction"),
-		nav=nav,
-	)
-
+	audio = deps.audio_player
 	return {
-		"home_view": home_view,
-		"introduction_view": introduction_view,
-		"flashcard_view": flashcard_view,
-		"translation_view": translation_view,
-		"translation_sandbox_view": translation_sandbox_view,
-		"test_view": test_view,
+		"flashcard_view": FlashcardView(
+			root=view_stack.register("flashcard"),
+			nav=nav,
+			audio_player=audio,
+			presenter=deps.flashcard_presenter,
+		),
+		"translation_view": TranslationView(
+			root=view_stack.register("translation"),
+			nav=nav,
+			audio_player=audio,
+			presenter=deps.translation_presenter,
+		),
+		"translation_sandbox_view": TranslationSandboxView(
+			root=view_stack.register("sandbox"),
+			nav=nav,
+			audio_player=audio,
+			presenter=deps.sandbox_presenter,
+		),
+		"test_view": TestView(
+			root=view_stack.register("test"),
+			nav=nav,
+			audio_player=audio,
+			presenter=deps.test_presenter,
+		),
+		"home_view": HomeView(root=view_stack.register("home"), nav=nav),
+		"introduction_view": IntroductionView(root=view_stack.register("introduction"), nav=nav),
 	}

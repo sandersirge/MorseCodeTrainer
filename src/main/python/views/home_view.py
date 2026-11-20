@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from tkinter import TclError
 
 import customtkinter as ctk
@@ -9,6 +10,7 @@ from .theme import (
 	get_appearance_mode,
 	get_colors,
 	set_appearance_mode,
+	system_appearance_mode,
 )
 from .widgets import (
 	add_focus_highlight,
@@ -18,6 +20,12 @@ from .widgets import (
 	make_label,
 	setup_keyboard_navigation,
 )
+
+# Colour emoji can crash Tk on Linux/X11 ("BadLength" in XRender), so Linux
+# gets plain labels.
+_USE_EMOJI = not sys.platform.startswith("linux")
+_LABEL_LIGHT = "🌞 Hele" if _USE_EMOJI else "Hele"
+_LABEL_DARK = "🌙 Tume" if _USE_EMOJI else "Tume"
 
 
 class HomeView:
@@ -30,10 +38,12 @@ class HomeView:
 	) -> None:
 		self.root = root
 		self.nav = nav
-		# Initialize with dark theme - call CTK directly for initial setup only
-		ctk.set_appearance_mode("dark")
+		# Start in the operating system's light/dark mode (darkdetect ships with
+		# CustomTkinter); the toggle on this screen still switches it freely.
+		initial_mode = system_appearance_mode()
+		ctk.set_appearance_mode(initial_mode)
 		ctk.set_default_color_theme("blue")
-		set_appearance_mode("dark")
+		set_appearance_mode(initial_mode)
 
 		# Widget references – built once, repainted on theme change
 		self._built = False
@@ -50,7 +60,7 @@ class HomeView:
 
 	def _on_theme_selected(self, selected: str) -> None:
 		"""Handle theme selection from segmented button – repaints in-place."""
-		mode = "dark" if "Tume" in selected else "light"
+		mode = "dark" if selected == _LABEL_DARK else "light"
 		set_appearance_mode(mode)
 		self.root.after_idle(self._apply_colors)
 
@@ -76,7 +86,7 @@ class HomeView:
 
 		self._theme_segmented = ctk.CTkSegmentedButton(
 			self._header_frame,
-			values=["🌞 Hele", "🌙 Tume"],
+			values=[_LABEL_LIGHT, _LABEL_DARK],
 			command=self._on_theme_selected,
 			font=ctk.CTkFont(size=18, weight="bold"),
 			width=220,
@@ -89,7 +99,7 @@ class HomeView:
 			unselected_hover_color="#64748b",
 			text_color=colors.text_primary,
 		)
-		self._theme_segmented.set("🌙 Tume" if get_appearance_mode() == "dark" else "🌞 Hele")
+		self._theme_segmented.set(_LABEL_DARK if get_appearance_mode() == "dark" else _LABEL_LIGHT)
 		self._theme_segmented.pack(side="right")
 		add_focus_highlight(self._theme_segmented)
 
@@ -201,7 +211,7 @@ class HomeView:
 			unselected_hover_color=unselected_hover,
 			text_color=colors.text_primary,
 		)
-		self._theme_segmented.set("🌙 Tume" if get_appearance_mode() == "dark" else "🌞 Hele")
+		self._theme_segmented.set(_LABEL_DARK if get_appearance_mode() == "dark" else _LABEL_LIGHT)
 
 	def _clear_content(self) -> None:
 		"""Destroy this view's children without touching other views."""

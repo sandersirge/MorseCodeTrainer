@@ -9,6 +9,7 @@ from ..controllers.translation_controller import TranslationState
 from ..navigator import Navigator
 from .theme import get_colors, register_theme_callback
 from .widgets import (
+	font_mono,
 	make_button,
 	make_card,
 	make_entry,
@@ -26,12 +27,12 @@ class TranslationView:
 		self,
 		root: ctk.CTk,
 		nav: Navigator,
-		pygame_module,
+		audio_player,
 		presenter: TranslationPresenterProtocol,
 	) -> None:
 		self.root = root
 		self.nav = nav
-		self.pygame = pygame_module
+		self.audio = audio_player
 		self.presenter = presenter
 
 		self._built = False
@@ -64,9 +65,9 @@ class TranslationView:
 		self._button_font = make_font(size=18, weight="bold")
 		self._feedback_font = make_font(size=18, weight="semibold")
 		self._hint_font = make_font(size=16)
-		self._prompt_font_large = make_font(size=44, weight="bold", family="Consolas")
-		self._prompt_font_medium = make_font(size=34, weight="bold", family="Consolas")
-		self._entry_font = make_font(size=26, weight="bold", family="Consolas")
+		self._prompt_font_large = font_mono(44)
+		self._prompt_font_medium = font_mono(34)
+		self._entry_font = font_mono(26)
 
 		register_theme_callback(self._apply_colors)
 
@@ -105,7 +106,7 @@ class TranslationView:
 	def show_menu(self) -> None:
 		"""Display the translation direction selector."""
 
-		self.pygame.mixer.music.stop()
+		self.audio.stop()
 		self.reset_ui()
 		self._clear_content()
 		colors = get_colors()
@@ -213,7 +214,7 @@ class TranslationView:
 		self.mode = state.mode
 		self.title_text = state.title
 		self._failure_count = 0
-		self.pygame.mixer.music.stop()
+		self.audio.stop()
 
 		if need_initial_build:
 			self._build_translation_ui(state)
@@ -292,6 +293,7 @@ class TranslationView:
 		)
 		self.entry.grid(row=4, column=0, pady=(0, 16))
 		self.entry.bind("<Return>", self._on_translation_enter)
+		self.entry.bind("<KP_Enter>", self._on_translation_enter)
 
 		self.feedback_label = make_label(
 			self._card, "", font=self._feedback_font, text_color=colors.text_muted
@@ -421,7 +423,7 @@ class TranslationView:
 			self.hint_button.configure(state="disabled")
 
 		if self.audio_button:
-			if state.audio_available:
+			if state.audio_available and self.audio.available:
 				self.audio_button.configure(state="normal")
 				self.audio_button.grid()
 			else:
@@ -515,16 +517,14 @@ class TranslationView:
 					self.hint_label.configure(text="Vihje on saadaval, kui soovid.")
 
 	def play_translation_audio(self) -> None:
-		audio_path = self.presenter.audio_path()
-		if not audio_path:
-			self._set_feedback("Sellele kirjele helifaili pole.", False)
+		morse = self.presenter.audio_morse()
+		if not morse:
+			self._set_feedback("Sellele kirjele heli pole.", False)
 			return
-		try:
-			self.pygame.mixer.music.load(audio_path)
-			self.pygame.mixer.music.play()
-			self._set_feedback("Helifail esitatakse.", True)
-		except self.pygame.error:
-			self._set_feedback("Helifaili ei õnnestunud esitada.", False)
+		if self.audio.play_morse(morse):
+			self._set_feedback("Heli esitatakse.", True)
+		else:
+			self._set_feedback("Heli ei õnnestunud esitada.", False)
 
 	def _set_feedback(self, text: str, success: bool) -> None:
 		if not self.feedback_label:
@@ -539,7 +539,7 @@ class TranslationView:
 	def show_completion(self) -> None:
 		"""Display the completion message and reset sessions for a fresh run."""
 
-		self.pygame.mixer.music.stop()
+		self.audio.stop()
 		self._clear_content()
 		self.nav.reset_translation()
 		colors = get_colors()

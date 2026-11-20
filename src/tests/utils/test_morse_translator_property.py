@@ -98,9 +98,8 @@ class TestDecodeProperties:
 
 	@given(_supported_word)
 	@settings(max_examples=200)
-	def test_decoded_single_word_is_title_cased_first_char(self, word: str) -> None:
-		"""The first decoded character of a word is uppercase (or a digit/symbol)."""
+	def test_decoded_word_is_uppercase(self, word: str) -> None:
+		"""Decoded text is always uppercase (Morse has no letter case)."""
 		encoded = convert_text_to_morse(word)
 		decoded = convert_morse_to_text(encoded)
-		if decoded and decoded[0].isalpha():
-			assert decoded[0].isupper()
+		assert decoded == decoded.upper()

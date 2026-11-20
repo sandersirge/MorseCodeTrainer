@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from ..exceptions import SessionNotInitializedError
 from ..model.translation_session import TranslationSession
-from ..services.audio_cache import AudioCache
+from ..utils.morse_translator import normalize_morse
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class TranslationState:
 	progress_step: float
 	is_first: bool
 	is_last: bool
-	audio_path: str | None
+	audio_morse: str | None
 	progress_text: str
 	has_previous: bool
 	next_label: str
@@ -40,13 +40,11 @@ class TranslationPresenter:
 		self,
 		morse_session: TranslationSession,
 		text_session: TranslationSession,
-		audio_cache: AudioCache | None = None,
 	) -> None:
 		self._sessions = {
 			"morse_to_text": morse_session,
 			"text_to_morse": text_session,
 		}
-		self._audio_cache = audio_cache
 		self._active_mode: str | None = None
 
 	def reset(self) -> None:
@@ -104,22 +102,23 @@ class TranslationPresenter:
 		given = user_input.strip()
 
 		if self._active_mode == "text_to_morse":
-			normalized_given = " ".join(given.split())
-			normalized_correct = " ".join(correct.split())
-			is_correct = bool(normalized_given) and normalized_given == normalized_correct
+			# Same letters and the same word breaks; how a word gap is typed
+			# (3 spaces, "/", newline) doesn't matter.
+			normalized_given = normalize_morse(given)
+			is_correct = bool(normalized_given) and normalized_given == normalize_morse(correct)
 		else:
-			is_correct = bool(given) and given.upper() == correct.upper()
+			is_correct = bool(given) and " ".join(given.upper().split()) == " ".join(
+				correct.upper().split()
+			)
 
 		return is_correct, correct
 
-	def audio_path(self) -> str | None:
-		"""Fetch the audio file path associated with the active prompt."""
+	def audio_morse(self) -> str | None:
+		"""The Morse to play for the active prompt (only when the prompt is Morse)."""
 
-		if self._active_mode != "morse_to_text" or self._audio_cache is None:
+		if self._active_mode != "morse_to_text":
 			return None
-		session = self._require_session()
-		prompt = session.current_prompt()
-		return self._audio_cache.resolve(prompt, prompt)
+		return self._require_session().current_prompt()
 
 	def title_for_mode(self, mode: str) -> str:
 		return self._TITLES[mode]
@@ -135,10 +134,7 @@ class TranslationPresenter:
 			progress_value = 100.0 if index else 0.0
 
 		prompt = session.current_prompt()
-		if mode == "morse_to_text" and self._audio_cache is not None:
-			audio_path = self._audio_cache.resolve(prompt, prompt)
-		else:
-			audio_path = None
+		audio_morse = prompt if mode == "morse_to_text" else None
 		is_first = session.is_first()
 		is_last = session.is_last()
 		prompt_style = "large" if mode == "text_to_morse" else "medium"
@@ -153,12 +149,12 @@ class TranslationPresenter:
 			progress_step=progress_step,
 			is_first=is_first,
 			is_last=is_last,
-			audio_path=audio_path,
+			audio_morse=audio_morse,
 			progress_text=f"{progress_value:.1f}% läbitud",
 			has_previous=not is_first,
 			next_label="Lõpeta treening" if is_last else "Liigu edasi",
 			prompt_style=prompt_style,
-			audio_available=audio_path is not None,
+			audio_available=audio_morse is not None,
 		)
 
 	def _require_session(self) -> TranslationSession:

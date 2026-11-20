@@ -7,7 +7,7 @@ import customtkinter as ctk
 from ..model.test_session import TestResponse, TestSummary
 from .test_shared import prepare_backdrop
 from .theme import get_colors
-from .widgets import make_button, make_card, make_font, make_frame, make_label
+from .widgets import font_mono, make_button, make_card, make_font, make_frame, make_label
 
 
 class TestReviewScreen:
@@ -29,11 +29,11 @@ class TestReviewScreen:
 		self._title_font = make_font(size=32, weight="bold")
 		self._body_font = make_font(size=18)
 		self._muted_font = make_font(size=16)
-		self._callout_font = make_font(size=22, weight="bold", family="Segoe UI Semibold")
-		self._counter_font = make_font(size=26, weight="bold", family="Segoe UI Semibold")
+		self._callout_font = make_font(size=22, weight="bold")
+		self._counter_font = make_font(size=26, weight="bold")
 		self._feedback_font = make_font(size=20, weight="bold")
-		self._question_font = make_font(size=30, weight="bold", family="Consolas")
-		self._button_font = make_font(size=18, weight="bold", family="Segoe UI Semibold")
+		self._question_font = font_mono(30)
+		self._button_font = make_font(size=18, weight="bold")
 
 		self.review_meta_label: ctk.CTkLabel | None = None
 		self.review_question_label: ctk.CTkLabel | None = None
