@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .application import build_application
+from .application import launch
 
 
 def main() -> None:
-	application = build_application()
-	application.run()
+	"""Start the app with its loading screen."""
+	launch()

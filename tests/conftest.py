@@ -1,6 +1,11 @@
 """Shared fixtures for pytest."""
 
+import os
+
 import pytest
+
+# Animations jump straight to their end state in tests (must be set before import).
+os.environ.setdefault("MORSETRAINER_NO_ANIMATIONS", "1")
 
 # The package is importable because pyproject.toml sets pytest's pythonpath = ["src"].
 from morsetrainer.model.flashcard_session import Flashcard, FlashcardSession

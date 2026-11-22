@@ -6,9 +6,22 @@ import customtkinter as ctk
 
 from ..model.test_session import TestResponse, TestSummary
 from ..strings import t
-from .test_shared import prepare_backdrop
+from .motion import tween_color
 from .theme import get_colors
-from .widgets import font_mono, make_button, make_card, make_font, make_frame, make_label
+from .widgets import (
+	accent_color,
+	font_body,
+	font_mono,
+	font_muted,
+	footer_group,
+	make_button,
+	make_font,
+	make_frame,
+	make_label,
+	make_page,
+	pretty_morse,
+	spread_rows,
+)
 
 
 class TestReviewScreen:
@@ -27,14 +40,8 @@ class TestReviewScreen:
 		self.summary: TestSummary | None = None
 		self.review_index = 0
 
-		self._title_font = make_font(size=32, weight="bold")
-		self._body_font = make_font(size=18)
-		self._muted_font = make_font(size=16)
-		self._callout_font = make_font(size=22, weight="bold")
-		self._counter_font = make_font(size=26, weight="bold")
 		self._feedback_font = make_font(size=20, weight="bold")
 		self._question_font = font_mono(30)
-		self._button_font = make_font(size=18, weight="bold")
 
 		self.review_meta_label: ctk.CTkLabel | None = None
 		self.review_question_label: ctk.CTkLabel | None = None
@@ -64,93 +71,53 @@ class TestReviewScreen:
 
 		self.review_index = 0
 		self.clear_screen()
-		backdrop = prepare_backdrop(self.root)
 		colors = get_colors()
-
-		card = make_card(backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
-		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.84, relheight=0.84)
-
-		header_box = make_frame(card, fg_color=colors.section_bg, corner_radius=20)
-		header_box.pack(pady=(36, 18), padx=36, fill="x")
-		header_box.grid_columnconfigure(0, weight=1)
-		make_label(
-			header_box,
-			t("review.labivaatus"),
-			font=self._callout_font,
-			text_color=colors.text_primary,
-		).grid(row=0, column=0, pady=(20, 8))
+		page = make_page(
+			self.root,
+			title=t("review.labivaatus"),
+			back=(t("test.tulemused"), self._return_to_results),
+		)
 		self.review_meta_label = make_label(
-			header_box, "", font=self._counter_font, text_color=colors.text_primary
+			page.header, "", font=font_body(), text_color=accent_color()
 		)
-		self.review_meta_label.grid(row=1, column=0, pady=(0, 18))
+		self.review_meta_label.grid(row=2, column=0, pady=(4, 0))
 
-		question_container = make_frame(card, fg_color=colors.section_bg, corner_radius=20)
-		question_container.pack(fill="both", expand=True, padx=32, pady=(0, 24))
-		question_container.grid_columnconfigure(0, weight=1)
-		question_container.grid_rowconfigure(2, weight=1)
-
+		# Question on top, then your answer, then the verdict; all share the height.
+		page.body.grid_rowconfigure(0, weight=2)
+		page.body.grid_rowconfigure(1, weight=3)
+		question_box = make_frame(page.body, fg_color=colors.section_bg, corner_radius=20)
+		question_box.grid(row=0, column=0, sticky="nsew", pady=(8, 12))
 		self.review_question_label = make_label(
-			question_container,
-			"",
-			font=self._question_font,
-			text_color=colors.text_primary,
-			wraplength=780,
-			justify="center",
+			question_box, "", font=self._question_font, wraplength=900
 		)
-		self.review_question_label.grid(row=0, column=0, padx=32, pady=(36, 18), sticky="n")
+		self.review_question_label.place(relx=0.5, rely=0.5, anchor="center")
 
+		verdict = make_frame(page.body)
+		verdict.grid(row=1, column=0, sticky="nsew")
+		verdict.grid_columnconfigure(0, weight=1)
+		spread_rows(verdict, 3)
 		self.review_answer_label = make_label(
-			question_container,
-			"",
-			font=self._body_font,
-			text_color=colors.text_muted,
-			justify="center",
+			verdict, "", font=font_body(), text_color=colors.text_muted
 		)
-		self.review_answer_label.grid(row=1, column=0, padx=32, sticky="n")
-
+		self.review_answer_label.grid(row=1, column=0, pady=(0, 12))
 		self.review_feedback_label = make_label(
-			question_container,
-			"",
-			font=self._feedback_font,
-			text_color=colors.text_primary,
-			wraplength=760,
-			justify="center",
+			verdict, "", font=self._feedback_font, wraplength=820
 		)
-		self.review_feedback_label.grid(row=2, column=0, padx=32, pady=(24, 12), sticky="nsew")
-
+		self.review_feedback_label.grid(row=2, column=0, pady=(0, 12))
 		self.review_time_label = make_label(
-			question_container,
-			"",
-			font=self._muted_font,
-			text_color=colors.text_muted,
+			verdict, "", font=font_muted(), text_color=colors.text_muted
 		)
-		self.review_time_label.grid(row=3, column=0, padx=32, pady=(0, 24), sticky="s")
+		self.review_time_label.grid(row=3, column=0)
 
-		action_row = make_frame(card, fg_color="transparent")
-		action_row.pack(pady=(0, 36))
-		action_row.grid_columnconfigure((0, 1), weight=1)
-
+		left, right = footer_group(page.footer, 0), footer_group(page.footer, 2)
 		self.review_prev_button = make_button(
-			action_row,
-			text=t("common.liigu_tagasi"),
-			command=self._review_previous,
-			font=self._button_font,
-			variant="muted",
-			width=220,
-			height=52,
+			left, t("common.liigu_tagasi"), command=self._review_previous, variant="secondary"
 		)
-		self.review_prev_button.grid(row=0, column=0, padx=12)
-
+		self.review_prev_button.grid(row=0, column=0)
 		self.review_next_button = make_button(
-			action_row,
-			text=t("common.liigu_edasi"),
-			command=self._review_next,
-			font=self._button_font,
-			variant="primary",
-			width=220,
-			height=52,
+			right, t("common.liigu_edasi"), command=self._review_next, size="lg"
 		)
-		self.review_next_button.grid(row=0, column=1, padx=12)
+		self.review_next_button.grid(row=0, column=0)
 
 		self._update_review_display(responses[0], 0)
 
@@ -195,11 +162,20 @@ class TestReviewScreen:
 				text=t("common.question_counter", number=position + 1, total=total)
 			)
 		if self.review_question_label:
-			self.review_question_label.configure(text=question_text)
+			self.review_question_label.configure(text=pretty_morse(question_text))
 		if self.review_answer_label:
 			self.review_answer_label.configure(text=answer_text)
 		if self.review_feedback_label:
+			colors = get_colors()
+			color = (
+				colors.error_text
+				if points == 0
+				else accent_color()
+				if points == 0.5
+				else colors.success_text
+			)
 			self.review_feedback_label.configure(text=feedback)
+			tween_color(self.review_feedback_label, "text_color", colors.card_bg, color, 220)
 		if self.review_time_label:
 			self.review_time_label.configure(text=elapsed_text)
 		self._update_review_navigation(total)
@@ -218,49 +194,21 @@ class TestReviewScreen:
 
 	def _show_complete(self) -> None:
 		self.clear_screen()
-		backdrop = prepare_backdrop(self.root)
 		colors = get_colors()
-
-		card = make_card(backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
-		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.68, relheight=0.58)
-		card.grid_rowconfigure(0, weight=1)
-		card.grid_rowconfigure(1, weight=0)
-		card.grid_rowconfigure(2, weight=0)
-		card.grid_rowconfigure(3, weight=0)
-		card.grid_rowconfigure(4, weight=1)
-		card.grid_columnconfigure(0, weight=1)
-
-		header_box = make_frame(card, fg_color=colors.section_bg, corner_radius=20)
-		header_box.grid(row=1, column=0, padx=36, pady=(0, 16), sticky="ew")
+		page = make_page(
+			self.root, title=t("review.labivaatus_lopetatud"), relwidth=0.56, relheight=0.56
+		)
+		spread_rows(page.body, 2)
 		make_label(
-			header_box,
-			t("review.labivaatus_lopetatud"),
-			font=self._callout_font,
+			page.body,
+			t("review.oled_koik_kusimused_ule"),
+			font=font_body(),
 			text_color=colors.text_primary,
-		).pack(pady=20)
-
-		info_box = make_frame(card, fg_color=colors.section_bg, corner_radius=20)
-		info_box.grid(row=2, column=0, padx=36, pady=(0, 12), sticky="ew")
-		make_label(
-			info_box,
-			(t("review.oled_koik_kusimused_ule")),
-			font=self._body_font,
-			text_color=colors.text_primary,
-			wraplength=500,
-		).pack(padx=28, pady=24)
-
-		button_row = make_frame(card, fg_color="transparent")
-		button_row.grid(row=3, column=0, pady=(0, 24))
-
+			wraplength=560,
+		).grid(row=1, column=0, pady=(0, 24))
 		make_button(
-			button_row,
-			text=t("review.lopeta_labivaatus"),
-			command=self._return_to_results,
-			font=self._button_font,
-			variant="primary",
-			width=240,
-			height=48,
-		).pack()
+			page.body, t("review.lopeta_labivaatus"), command=self._return_to_results, size="lg"
+		).grid(row=2, column=0)
 
 	def _return_to_results(self) -> None:
 		if self.summary is None:

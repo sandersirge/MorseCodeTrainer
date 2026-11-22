@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tkinter import TclError, Tk, messagebox
+from tkinter import messagebox
 
 import customtkinter as ctk
 
@@ -8,24 +8,34 @@ from ..controllers.flashcard_controller import FlashcardState
 from ..controllers.protocols import FlashcardPresenterProtocol
 from ..navigator import Navigator
 from ..strings import t
-from .theme import get_colors, register_theme_callback
+from .motion import Animation, tween_color
+from .theme import get_colors
 from .widgets import (
+	font_body,
 	font_mono,
+	footer_group,
 	make_button,
-	make_card,
-	make_font,
 	make_frame,
 	make_label,
+	make_page,
 	make_progress_bar,
+	pretty_morse,
+	spread_rows,
 )
+
+_CATEGORY_TITLES = {
+	"tähed": "flashcards.opi_tahti",
+	"numbrid": "flashcards.opi_numbreid",
+	"märgid": "flashcards.opi_kirjavahemarke",
+}
 
 
 class FlashcardView:
-	"""Flashcard-based learning flows (Õpperežiim)."""
+	"""Flashcards: choose a deck, flip cards, rate yourself, listen."""
 
 	def __init__(
 		self,
-		root: Tk,
+		root,
 		nav: Navigator,
 		audio_player,
 		presenter: FlashcardPresenterProtocol,
@@ -35,115 +45,52 @@ class FlashcardView:
 		self.audio = audio_player
 		self.presenter = presenter
 		self.state: FlashcardState | None = None
-		self._rendered_category: str | None = None
-		self._built = False
-		self._backdrop: ctk.CTkFrame | None = None
-		self._card: ctk.CTkFrame | None = None
-		self._display_frame: ctk.CTkFrame | None = None
-		self._controls: ctk.CTkFrame | None = None
-		self._flip_button: ctk.CTkButton | None = None
-		self._back_button: ctk.CTkButton | None = None
-		self.progress_bar: ctk.CTkProgressBar | None = None
-		self.progress_label: ctk.CTkLabel | None = None
-		self.display_label: ctk.CTkLabel | None = None
-		self.prev_button: ctk.CTkButton | None = None
-		self.next_button: ctk.CTkButton | None = None
-		self.audio_button: ctk.CTkButton | None = None
-		self._rate_frame: ctk.CTkFrame | None = None
-		self._peak_progress_value = 0.0
-		self._title_font = make_font(size=34, weight="bold")
-		self._body_font = make_font(size=18, weight="bold")
-		self._display_font = font_mono(78)
-		self._button_font = make_font(size=18, weight="bold")
-		self._large_button_font = make_font(size=20, weight="bold")
-		self._message_font = make_font(size=22, weight="bold")
+		self._display_font = font_mono(96)
+		self._fade: Animation | None = None
 		self.reset_state()
-		register_theme_callback(self._apply_colors)
 
 	def reset_state(self) -> None:
 		self.presenter.reset()
 		self.state = None
-		self._rendered_category = None
 		self._built = False
-		self._backdrop = None
-		self._card = None
-		self._display_frame = None
-		self._controls = None
-		self._flip_button = None
-		self._back_button = None
-		self.progress_bar = None
-		self.progress_label = None
-		self.display_label = None
-		self.prev_button = None
-		self.next_button = None
-		self.audio_button = None
-		self._rate_frame = None
 		self._peak_progress_value = 0.0
+		self.progress_bar: ctk.CTkProgressBar | None = None
+		self.progress_label: ctk.CTkLabel | None = None
+		self.display_label: ctk.CTkLabel | None = None
+		self._display_frame: ctk.CTkFrame | None = None
+		self.prev_button: ctk.CTkButton | None = None
+		self.next_button: ctk.CTkButton | None = None
+		self.audio_button: ctk.CTkButton | None = None
+		self._rate_frame: ctk.CTkFrame | None = None
 		self.audio.stop()
 
 	def _clear_content(self) -> None:
-		"""Destroy this view's children without touching other views."""
-		for w in self.root.winfo_children():
-			w.destroy()
+		for widget in self.root.winfo_children():
+			widget.destroy()
 
 	# Menu -----------------------------------------------------------------
 
 	def show_menu(self) -> None:
-		"""Display the flashcard learning menu."""
-
+		"""Choose a deck: letters, numbers or punctuation."""
 		self.reset_state()
 		self._clear_content()
-		colors = get_colors()
-		self._set_root_background(colors.backdrop_bg)
-
-		backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
-		backdrop.pack(fill="both", expand=True)
-
-		card = make_card(backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
-		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.72, relheight=0.7)
-
-		make_label(
-			card,
-			t("flashcards.sumbolitega_tutvumine"),
-			font=self._title_font,
-			text_color=colors.text_primary,
-		).pack(pady=(32, 12))
-		make_label(
-			card,
-			t("flashcards.vali_kategooria_mida_soovid"),
-			font=self._body_font,
-			text_color=colors.text_primary,
-			wraplength=640,
-		).pack(pady=(10, 40))
-
-		buttons = make_frame(card, fg_color="transparent")
-		buttons.pack(expand=True, pady=(0, 24))
-
-		for text, callback in (
+		page = make_page(
+			self.root,
+			title=t("flashcards.sumbolitega_tutvumine"),
+			subtitle=t("flashcards.vali_kategooria_mida_soovid"),
+			back=(t("common.tagasi"), self.nav.learn_hub),
+			relwidth=0.7,
+		)
+		decks = (
 			(t("flashcards.opi_tahti"), self.show_letters),
 			(t("flashcards.opi_numbreid"), self.show_numbers),
 			(t("flashcards.opi_kirjavahemarke"), self.show_symbols),
-		):
-			make_button(
-				buttons,
-				text=text,
-				command=callback,
-				font=self._large_button_font,
-				variant="primary",
-				width=260,
-				height=66,
-				corner_radius=16,
-			).pack(pady=14)
-
-		make_button(
-			card,
-			text=t("common.tagasi_avalehele"),
-			command=self.nav.home,
-			font=self._button_font,
-			variant="danger",
-			width=220,
-			height=44,
-		).pack(pady=(10, 24))
+		)
+		spread_rows(page.body, len(decks))
+		for row, (label, callback) in enumerate(decks, start=1):
+			make_button(page.body, label, command=callback, size="lg", width=320).grid(
+				row=row, column=0, pady=10
+			)
 
 	# Category views -------------------------------------------------------
 
@@ -159,247 +106,133 @@ class FlashcardView:
 	def _start_category(self, category: str, missing_message: str) -> None:
 		state = self.presenter.start(category)
 		if state is None:
-			self._show_missing_data(missing_message)
+			self._show_message(missing_message, error=True)
 			return
 		self.state = state
+		self._built = False
 		self._render_state()
 
-	def _render_state(self) -> None:
+	def _render_state(self, *, fade: bool = False) -> None:
 		if not self.state:
 			return
-		state = self.state
-
-		# Only rebuild UI if widgets don't exist yet
-		need_initial_build = (
-			not self._built or self.progress_bar is None or self.display_label is None
-		)
-
-		if need_initial_build:
-			self._rendered_category = state.category
-			self._build_flashcard_ui(state)
-			return
-
-		# Category changed - reset progress peak but don't rebuild UI
-		if self._rendered_category != state.category:
-			self._rendered_category = state.category
-			self._peak_progress_value = 0.0
-
-		self._update_flashcard_content(state, animated=True)
-
-	def _show_missing_data(self, message: str) -> None:
-		self._clear_content()
-		colors = get_colors()
-		self._set_root_background(colors.backdrop_bg)
-
-		backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
-		backdrop.pack(fill="both", expand=True)
-
-		card = make_card(backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
-		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.55, relheight=0.4)
-
-		make_label(
-			card, message, font=self._body_font, text_color=colors.error_text, wraplength=520
-		).pack(pady=(40, 20), padx=32)
-
-		make_button(
-			card,
-			text=t("common.tagasi"),
-			command=self.show_menu,
-			font=self._button_font,
-			variant="primary",
-			width=180,
-			height=44,
-		).pack()
+		if not self._built:
+			self._build_flashcard_ui(self.state)
+		self._update_flashcard_content(self.state, animated=True, fade=fade)
 
 	def _build_flashcard_ui(self, state: FlashcardState) -> None:
 		self._clear_content()
 		colors = get_colors()
-		self._set_root_background(colors.backdrop_bg)
-
-		self._backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
-		self._backdrop.pack(fill="both", expand=True)
-
-		self._card = make_card(
-			self._backdrop, fg_color=colors.card_bg, border_color=colors.card_border
+		page = make_page(
+			self.root,
+			title=t(_CATEGORY_TITLES.get(state.category, "flashcards.sumbolitega_tutvumine")),
+			back=(t("common.tagasi_valikute_juurde"), self.show_menu),
 		)
-		self._card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.78, relheight=0.78)
 
-		self._card.grid_rowconfigure(2, weight=1)
-		self._card.grid_columnconfigure(0, weight=1)
-
+		progress = make_frame(page.header)
+		progress.grid(row=2, column=0, sticky="ew", pady=(10, 0), padx=60)
+		progress.grid_columnconfigure(0, weight=1)
 		self.progress_bar = make_progress_bar(
-			self._card,
-			root=self.root,
-			width=520,
-			height=14,
-			progress_color=colors.success_text,
+			progress, root=self.root, height=10, progress_color=colors.success_text
 		)
-		self.progress_bar.grid(row=0, column=0, padx=48, pady=(32, 14), sticky="ew")
-
+		self.progress_bar.grid(row=0, column=0, sticky="ew")
 		self.progress_label = make_label(
-			self._card, state.progress_text, font=self._body_font, text_color=colors.text_muted
+			progress, state.progress_text, font=font_body(), text_color=colors.text_muted
 		)
-		self.progress_label.grid(row=1, column=0, padx=48, pady=(0, 24))
+		self.progress_label.grid(row=1, column=0, pady=(6, 0))
 
-		self._display_frame = make_frame(self._card, fg_color=colors.section_bg, corner_radius=20)
-		self._display_frame.grid(row=2, column=0, padx=48, pady=(0, 32), sticky="nsew")
+		# Card face takes all the height; rating row sits right under it.
+		page.body.grid_rowconfigure(0, weight=1)
+		self._display_frame = make_frame(page.body, fg_color=colors.section_bg, corner_radius=24)
+		self._display_frame.grid(row=0, column=0, sticky="nsew", pady=(8, 12))
 		self.display_label = make_label(
-			self._display_frame,
-			state.display_text,
-			font=self._display_font,
-			text_color=colors.text_primary,
+			self._display_frame, state.display_text, font=self._display_font
 		)
-		self.display_label.pack(expand=True, padx=40, pady=24)
+		self.display_label.place(relx=0.5, rely=0.5, anchor="center")
+		# Clicking the card flips it, like a real card.
+		for widget in (self._display_frame, self.display_label):
+			widget.bind("<Button-1>", lambda _e: self.toggle_card(), add="+")
+			widget.configure(cursor="hand2")
 
-		self._controls = make_frame(self._card, fg_color="transparent")
-		self._controls.grid(row=3, column=0, pady=(0, 28))
-
-		self._flip_button = make_button(
-			self._controls,
-			text=t("flashcards.poora_kaarti"),
-			command=self.toggle_card,
-			font=self._button_font,
-			variant="primary",
-			width=180,
-			height=44,
-		)
-		self._flip_button.grid(row=0, column=0, padx=12, pady=10)
-
-		self.prev_button = make_button(
-			self._controls,
-			text=t("common.liigu_tagasi"),
-			command=self.previous_card,
-			font=self._button_font,
-			variant="muted",
-			width=180,
-			height=44,
-		)
-		self.prev_button.grid(row=0, column=1, padx=12, pady=10)
-
-		self.next_button = make_button(
-			self._controls,
-			text=state.next_label,
-			command=self.next_card,
-			font=self._button_font,
-			variant="secondary",
-			width=200,
-			height=44,
-		)
-		self.next_button.grid(row=0, column=2, padx=12, pady=10)
-
-		self.audio_button = make_button(
-			self._controls,
-			text=t("flashcards.kuula_heli"),
-			command=self.play_flashcard_audio,
-			font=self._button_font,
-			variant="positive",
-			width=180,
-			height=44,
-		)
-		self.audio_button.grid(row=0, column=3, padx=12, pady=10)
-
-		# Self-rating (shown on the back side): feeds the weak-first card order.
-		self._rate_frame = make_frame(self._controls, fg_color="transparent")
-		self._rate_frame.grid(row=1, column=0, columnspan=4, pady=(4, 0))
+		self._rate_frame = make_frame(page.body)
+		self._rate_frame.grid(row=1, column=0, pady=(0, 4))
 		make_button(
 			self._rate_frame,
-			text=t("flashcards.knew_it"),
+			t("flashcards.knew_it"),
 			command=lambda: self.rate_card(True),
-			font=self._button_font,
 			variant="positive",
-			width=180,
-			height=40,
-		).grid(row=0, column=0, padx=12)
+			width=200,
+		).grid(row=0, column=0, padx=10)
 		make_button(
 			self._rate_frame,
-			text=t("flashcards.did_not_know"),
+			t("flashcards.did_not_know"),
 			command=lambda: self.rate_card(False),
-			font=self._button_font,
 			variant="danger",
-			width=180,
-			height=40,
-		).grid(row=0, column=1, padx=12)
+			width=200,
+		).grid(row=0, column=1, padx=10)
 
-		self._back_button = make_button(
-			self._card,
-			text=t("common.tagasi_valikute_juurde"),
-			command=self.show_menu,
-			font=self._button_font,
-			variant="danger",
-			width=240,
-			height=44,
+		left, center, right = (footer_group(page.footer, c) for c in (0, 1, 2))
+		self.prev_button = make_button(
+			left, t("common.liigu_tagasi"), command=self.previous_card, variant="secondary"
 		)
-		self._back_button.grid(row=4, column=0, pady=(0, 24))
-
+		self.prev_button.grid(row=0, column=0)
+		make_button(center, t("flashcards.poora_kaarti"), command=self.toggle_card, size="lg").grid(
+			row=0, column=0
+		)
+		self.audio_button = make_button(
+			center,
+			t("flashcards.kuula_heli"),
+			command=self.play_flashcard_audio,
+			variant="secondary",
+		)
+		self.audio_button.grid(row=0, column=1, padx=(16, 0))
+		self.next_button = make_button(
+			right, state.next_label, command=self.next_card, variant="secondary"
+		)
+		self.next_button.grid(row=0, column=0)
 		self._built = True
-		self._update_flashcard_content(state, animated=False)
 
-	def _update_flashcard_content(self, state: FlashcardState, *, animated: bool) -> None:
+	def _update_flashcard_content(
+		self, state: FlashcardState, *, animated: bool, fade: bool = False
+	) -> None:
+		colors = get_colors()
 		if self.progress_bar:
-			previous_peak = self._peak_progress_value
-			current_value = max(0.0, min(100.0, state.progress_value))
-			if current_value > previous_peak:
-				self._peak_progress_value = current_value
-			display_value = self._peak_progress_value / 100.0
-			should_animate = animated and self._peak_progress_value > previous_peak
-			self.progress_bar.set_progress(display_value, animated=should_animate)
-
+			current = max(0.0, min(100.0, state.progress_value))
+			grew = current > self._peak_progress_value
+			self._peak_progress_value = max(self._peak_progress_value, current)
+			self.progress_bar.set_progress(
+				self._peak_progress_value / 100.0, animated=animated and grew
+			)
 		if self.progress_label:
-			progress_text = t("common.progress", percent=self._peak_progress_value)
-			self.progress_label.configure(text=progress_text)
-
+			self.progress_label.configure(
+				text=t("common.progress", percent=self._peak_progress_value)
+			)
 		if self.display_label:
-			self.display_label.configure(text=state.display_text)
-
+			text = pretty_morse(state.display_text) if state.is_back_side else state.display_text
+			self.display_label.configure(text=text)
+			if fade:
+				# Flip: the new side fades in from the card colour.
+				self._fade = tween_color(
+					self.display_label,
+					"text_color",
+					colors.section_bg,
+					colors.text_primary,
+					200,
+					self._fade,
+				)
 		if self.prev_button:
-			prev_state = "normal" if state.has_previous else "disabled"
-			self.prev_button.configure(state=prev_state)
-
+			self.prev_button.configure(state="normal" if state.has_previous else "disabled")
 		if self.next_button:
 			self.next_button.configure(text=state.next_label)
-
 		if self._rate_frame is not None:
 			if state.can_rate:
 				self._rate_frame.grid()
 			else:
 				self._rate_frame.grid_remove()
-
 		if self.audio_button:
 			if state.show_audio_button and self.audio.available:
-				self.audio_button.configure(state="normal")
 				self.audio_button.grid()
 			else:
-				self.audio_button.configure(state="disabled")
 				self.audio_button.grid_remove()
-
-	def _apply_colors(self) -> None:
-		"""Update all widget colors to match the current theme without rebuilding."""
-		if not self._built:
-			return
-		colors = get_colors()
-
-		# Root / backdrop
-		self._set_root_background(colors.backdrop_bg)
-		if self._backdrop:
-			self._backdrop.configure(fg_color=colors.backdrop_bg)
-
-		# Card
-		if self._card:
-			self._card.configure(fg_color=colors.card_bg, border_color=colors.card_border)
-
-		# Display frame
-		if self._display_frame:
-			self._display_frame.configure(fg_color=colors.section_bg)
-
-		# Labels
-		if self.progress_label:
-			self.progress_label.configure(text_color=colors.text_muted)
-		if self.display_label:
-			self.display_label.configure(text_color=colors.text_primary)
-
-		# Progress bar
-		if self.progress_bar:
-			self.progress_bar.configure(progress_color=colors.success_text)
 
 	# Navigation -----------------------------------------------------------
 
@@ -407,13 +240,13 @@ class FlashcardView:
 		if not self.state:
 			return
 		self.state = self.presenter.toggle()
-		self._render_state()
+		self._render_state(fade=True)
 
 	def previous_card(self) -> None:
 		if not self.state:
 			return
 		self.state = self.presenter.previous()
-		self._render_state()
+		self._render_state(fade=True)
 
 	def rate_card(self, knew_it: bool) -> None:
 		if not self.state:
@@ -423,7 +256,7 @@ class FlashcardView:
 			self.flashcard_finish()
 			return
 		self.state = next_state
-		self._render_state()
+		self._render_state(fade=True)
 
 	def next_card(self) -> None:
 		if not self.state:
@@ -433,7 +266,7 @@ class FlashcardView:
 			self.flashcard_finish()
 			return
 		self.state = next_state
-		self._render_state()
+		self._render_state(fade=True)
 
 	def play_flashcard_audio(self) -> None:
 		if not self.state or not self.state.audio_morse:
@@ -448,58 +281,24 @@ class FlashcardView:
 	def flashcard_finish(self) -> None:
 		self.audio.stop()
 		self.reset_state()
+		self._show_message(t("flashcards.tubli_too_koik_kaardid"), title=t("common.lopp"))
+
+	def _show_message(self, message: str, *, title: str | None = None, error: bool = False) -> None:
+		"""A small result page with one OK button back to the deck choice."""
 		self._clear_content()
 		colors = get_colors()
-		self._set_root_background(colors.backdrop_bg)
-
-		backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
-		backdrop.pack(fill="both", expand=True)
-
-		card = make_card(backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
-		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.62, relheight=0.52)
-
-		card.grid_rowconfigure(1, weight=1)
-		card.grid_columnconfigure(0, weight=1)
-
+		page = make_page(self.root, title=title, relwidth=0.56, relheight=0.56)
+		spread_rows(page.body, 2)
 		make_label(
-			card, t("common.lopp"), font=self._title_font, text_color=colors.text_primary
-		).grid(row=0, column=0, pady=(36, 24))
-
-		message_block = make_frame(card, fg_color=colors.section_bg, corner_radius=28)
-		message_block.grid(row=1, column=0, padx=36, pady=(0, 36), sticky="nsew")
-		message_block.grid_rowconfigure(0, weight=1)
-		message_block.grid_columnconfigure(0, weight=1)
-
-		message_label = make_label(
-			message_block,
-			t("flashcards.tubli_too_koik_kaardid"),
-			font=self._message_font,
-			text_color=colors.text_muted,
+			page.body,
+			message,
+			font=font_body(),
+			text_color=colors.error_text if error else colors.text_primary,
+			wraplength=560,
+		).grid(row=1, column=0, pady=(0, 24))
+		make_button(page.body, t("common.ok"), command=self.show_menu, size="lg", width=200).grid(
+			row=2, column=0
 		)
-		message_label.grid(row=0, column=0, padx=32, pady=28, sticky="nsew")
-		message_block.update_idletasks()
-		message_label.configure(wraplength=max(message_block.winfo_width() - 64, 360))
 
-		button_row = make_frame(card, fg_color="transparent")
-		button_row.grid(row=2, column=0, pady=(0, 36))
 
-		make_button(
-			button_row,
-			text=t("common.ok"),
-			command=self.show_menu,
-			font=self._large_button_font,
-			variant="positive",
-			width=200,
-			height=48,
-		).pack()
-
-	# Internal helpers ----------------------------------------------------
-
-	def _set_root_background(self, color: str) -> None:
-		try:
-			self.root.configure(fg_color=color)
-		except TclError:
-			try:
-				self.root.configure(bg=color)
-			except TclError:
-				pass
+__all__ = ["FlashcardView"]

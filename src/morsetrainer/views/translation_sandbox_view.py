@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from tkinter import TclError, filedialog, messagebox
-
-import customtkinter as ctk
+from tkinter import filedialog, messagebox
 
 from ..controllers.protocols import SandboxPresenterProtocol
 from ..controllers.translation_sandbox_controller import SandboxState
@@ -11,23 +9,8 @@ from ..exceptions import MorseTrainerError
 from ..navigator import Navigator
 from ..strings import t
 from .audio_section import AudioSection
-from .theme import get_colors
 from .translation_section import TranslationSection
-from .widgets import font_body, font_title
-
-
-def _prepare_backdrop(root) -> ctk.CTkFrame:
-	bg = get_colors().backdrop_bg
-	try:
-		root.configure(fg_color=bg)
-	except TclError:
-		try:
-			root.configure(bg=bg)
-		except TclError:
-			pass
-	backdrop = ctk.CTkFrame(root, fg_color=bg)
-	backdrop.pack(fill="both", expand=True)
-	return backdrop
+from .widgets import make_page
 
 
 class TranslationSandboxView:
@@ -67,51 +50,29 @@ class TranslationSandboxView:
 	# Layout -----------------------------------------------------------------
 
 	def _build_layout(self) -> None:
-		backdrop = _prepare_backdrop(self.root)
-
-		_c = get_colors()
-		card = ctk.CTkFrame(
-			backdrop,
-			fg_color=_c.card_bg,
-			corner_radius=28,
-			border_width=1,
-			border_color=_c.card_border,
+		page = make_page(
+			self.root,
+			title=t("sandbox.sandbox_tolkimine"),
+			subtitle=t("sandbox.katseta_erinevaid_tolkesuundi_muuda"),
+			back=(t("common.tagasi_avalehele"), self._go_home),
+			relwidth=0.92,
+			relheight=0.92,
 		)
-		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.9, relheight=0.86)
-		card.grid_columnconfigure((0, 1), weight=1)
-		card.grid_rowconfigure(2, weight=1)
-
-		self._title_font = font_title()
-		self._body_font = font_body()
-
-		ctk.CTkLabel(
-			card,
-			text=t("sandbox.sandbox_tolkimine"),
-			font=self._title_font,
-			text_color=_c.text_primary,
-		).grid(row=0, column=0, columnspan=2, pady=(36, 16))
-
-		ctk.CTkLabel(
-			card,
-			text=(t("sandbox.katseta_erinevaid_tolkesuundi_muuda")),
-			font=self._body_font,
-			text_color=_c.text_muted,
-			wraplength=780,
-			justify="center",
-		).grid(row=1, column=0, columnspan=2, padx=64, pady=(0, 24))
+		page.footer.grid_remove()
+		page.body.grid_configure(padx=32, pady=(8, 28))
+		page.body.grid_columnconfigure((0, 1), weight=1, uniform="half")
+		page.body.grid_rowconfigure(0, weight=1)
 
 		self.translation_section = TranslationSection(
-			card,
+			page.body,
 			on_select_mode=self._on_select_mode,
 			on_translate=self._on_translate,
 			on_clear=self._on_clear,
 		)
-		self.translation_section.container.grid(
-			row=2, column=0, sticky="nsew", padx=(40, 18), pady=(0, 36)
-		)
+		self.translation_section.container.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
 
 		self.audio_section = AudioSection(
-			card,
+			page.body,
 			root=self.root,
 			audio_player=self.audio,
 			on_play=self._on_play_audio,
@@ -121,12 +82,15 @@ class TranslationSandboxView:
 			on_wpm_change=self._handle_wpm_change,
 			on_effective_wpm_change=self._handle_effective_wpm_change,
 			on_pitch_change=self._handle_pitch_change,
-			on_home=self.nav.home,
+			on_home=self._go_home,
 			on_audio_error=self._show_error,
 		)
-		self.audio_section.container.grid(
-			row=2, column=1, sticky="nsew", padx=(18, 40), pady=(0, 36)
-		)
+		self.audio_section.container.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
+
+	def _go_home(self) -> None:
+		if self.audio_section is not None:
+			self.audio_section.stop_playback()
+		self.nav.home()
 
 	# Rendering ---------------------------------------------------------------
 

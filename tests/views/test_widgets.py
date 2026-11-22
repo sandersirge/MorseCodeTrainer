@@ -38,20 +38,21 @@ class TestGetButtonStyle:
 		assert style.hover_color
 		assert style.text_color
 
-	def test_primary_text_is_theme_text_primary(self):
+	def test_primary_text_is_white_on_blue(self):
+		# Filled buttons keep white text in both themes for contrast.
 		style = get_button_style("primary")
-		assert style.text_color == DARK_THEME.text_primary
+		assert style.text_color == "#ffffff"
 
-	def test_primary_text_changes_with_theme(self):
+	def test_primary_text_same_in_both_themes(self):
 		dark_style = get_button_style("primary")
 		set_appearance_mode("light")
 		light_style = get_button_style("primary")
-		assert dark_style.text_color == DARK_THEME.text_primary
-		assert light_style.text_color == LIGHT_THEME.text_primary
+		assert dark_style.text_color == light_style.text_color == "#ffffff"
 
-	def test_secondary_text_is_theme_text_dark(self):
+	def test_secondary_is_outline_in_accent_colour(self):
 		style = get_button_style("secondary")
-		assert style.text_color == DARK_THEME.text_dark
+		assert style.fg_color == "transparent"
+		assert style.text_color == style.border_color
 
 	def test_muted_bg_changes_with_theme(self):
 		dark_style = get_button_style("muted")
@@ -68,9 +69,10 @@ class TestGetButtonStyle:
 		assert dark_style.hover_color == DARK_THEME.entry_border
 		assert light_style.hover_color == LIGHT_THEME.entry_border
 
-	def test_danger_text_is_theme_text_primary(self):
+	def test_danger_is_red_outline(self):
 		style = get_button_style("danger")
-		assert style.text_color == DARK_THEME.text_primary
+		assert style.text_color == DARK_THEME.error_text
+		assert style.border_color == DARK_THEME.error_text
 
 	def test_positive_is_theme_independent(self):
 		dark_style = get_button_style("positive")
@@ -78,10 +80,11 @@ class TestGetButtonStyle:
 		light_style = get_button_style("positive")
 		assert dark_style == light_style
 
-	def test_ghost_variant_removed(self):
-		"""ghost was dead code and should gracefully fall back to primary."""
+	def test_ghost_is_text_only(self):
+		"""ghost is used for back/navigation links: no fill, no border."""
 		style = get_button_style("ghost")
-		assert style == get_button_style("primary")
+		assert style.fg_color == "transparent"
+		assert style.border_width == 0
 
 
 class TestButtonStyleDataclass:

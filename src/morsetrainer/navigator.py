@@ -24,3 +24,6 @@ class Navigator:
 	reset_translation: Callable[[], None]
 	koch: Callable[[], None] = lambda: None
 	keyer: Callable[[], None] = lambda: None
+	# Two-level home menu: Õpe (flashcards, Koch) and Harjutused (translation, keyer)
+	learn_hub: Callable[[], None] = lambda: None
+	practice_hub: Callable[[], None] = lambda: None

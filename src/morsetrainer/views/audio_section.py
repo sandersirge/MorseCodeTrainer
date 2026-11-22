@@ -116,6 +116,7 @@ class AudioSection:
 
 		sliders_panel = make_frame(self.container, fg_color="transparent")
 		sliders_panel.grid(row=1, column=0, padx=32, sticky="nsew")
+		sliders_panel.rowconfigure(0, weight=1)
 		sliders_panel.columnconfigure((0, 1, 2, 3), weight=1)
 
 		self._build_slider(
@@ -192,8 +193,8 @@ class AudioSection:
 		self.stop_audio_button.grid(row=0, column=1, padx=(12, 0), sticky="ew")
 
 		save_panel = make_frame(self.container, fg_color="transparent")
-		save_panel.grid(row=3, column=0, padx=32, sticky="ew")
-		save_panel.columnconfigure(0, weight=1)
+		save_panel.grid(row=3, column=0, padx=32, pady=(0, 30), sticky="ew")
+		save_panel.columnconfigure((0, 1), weight=1)
 
 		self.save_audio_button = make_button(
 			save_panel,
@@ -203,7 +204,7 @@ class AudioSection:
 			variant="secondary",
 			height=44,
 		)
-		self.save_audio_button.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+		self.save_audio_button.grid(row=0, column=0, sticky="ew", padx=(0, 12))
 
 		self.save_audio_as_button = make_button(
 			save_panel,
@@ -213,22 +214,10 @@ class AudioSection:
 			variant="secondary",
 			height=44,
 		)
-		self.save_audio_as_button.grid(row=1, column=0, sticky="ew")
+		self.save_audio_as_button.grid(row=0, column=1, sticky="ew", padx=(12, 0))
 
-		navigation_panel = make_frame(self.container, fg_color="transparent")
-		navigation_panel.grid(row=4, column=0, padx=32, pady=(28, 28), sticky="ew")
-		navigation_panel.columnconfigure(0, weight=1)
-
-		make_button(
-			navigation_panel,
-			text=t("common.tagasi_avalehele"),
-			command=self._handle_home,
-			font=self._button_font,
-			variant="danger",
-			height=44,
-		).grid(row=0, column=0, sticky="ew")
-
-		for row in range(5):
+		# The sliders take the spare height (back navigation lives in the page header).
+		for row in range(4):
 			self.container.grid_rowconfigure(row, weight=0)
 		self.container.grid_rowconfigure(1, weight=1)
 
@@ -251,6 +240,7 @@ class AudioSection:
 		column_frame = make_frame(parent, fg_color="transparent")
 		column_frame.grid(row=0, column=column, padx=12, sticky="nsew")
 		column_frame.columnconfigure(0, weight=1)
+		column_frame.rowconfigure(1, weight=1)  # the slider grows with the panel
 
 		make_label(
 			column_frame,

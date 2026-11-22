@@ -122,14 +122,21 @@ class TestRegressionNoStaticColorExports:
 		assert hasattr(theme_module, "FONT_SIZE_MD")
 
 
-class TestRegressionGhostVariantRemoved:
-	"""regression: ghost button variant existed but had zero call sites.
+class TestRegressionGhostVariantThemeAware:
+	"""regression: an earlier 'ghost' variant used hardcoded dark-mode colours.
 
-	It was dead code using hardcoded dark-mode colours. Removed from
-	get_button_style(). Requesting 'ghost' should fall back to 'primary'.
+	It is now used for back/navigation links and must follow the theme.
 	"""
 
-	def test_ghost_falls_back_to_primary(self):
-		ghost = get_button_style("ghost")
-		primary = get_button_style("primary")
-		assert ghost == primary
+	def test_ghost_text_follows_theme(self):
+		set_appearance_mode("dark")
+		dark = get_button_style("ghost")
+		set_appearance_mode("light")
+		try:
+			light = get_button_style("ghost")
+		finally:
+			set_appearance_mode("dark")
+		assert dark.text_color != light.text_color
+
+	def test_unknown_variant_still_falls_back_to_primary(self):
+		assert get_button_style("no-such-variant") == get_button_style("primary")

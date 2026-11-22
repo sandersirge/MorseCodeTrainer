@@ -1,28 +1,33 @@
 from __future__ import annotations
 
-from tkinter import TclError
-
 import customtkinter as ctk
 
 from ..controllers.protocols import TranslationPresenterProtocol
 from ..controllers.translation_controller import TranslationState
 from ..navigator import Navigator
 from ..strings import t
-from .theme import get_colors, register_theme_callback
+from .motion import Animation, tween_color
+from .theme import get_colors
 from .widgets import (
+	font_body,
 	font_mono,
+	font_muted,
+	footer_group,
 	make_button,
-	make_card,
 	make_entry,
-	make_font,
 	make_frame,
 	make_label,
+	make_page,
 	make_progress_bar,
+	pretty_morse,
+	spread_rows,
 )
+
+_HINT_AFTER_FAILURES = 5
 
 
 class TranslationView:
-	"""Encapsulates the translation training interface and interactions."""
+	"""Translation drills: pick a direction and source, then translate item by item."""
 
 	def __init__(
 		self,
@@ -35,16 +40,16 @@ class TranslationView:
 		self.nav = nav
 		self.audio = audio_player
 		self.presenter = presenter
+		self._prompt_font_large = font_mono(44)
+		self._prompt_font_medium = font_mono(34)
+		self._entry_font = font_mono(26)
+		self._feedback_fade: Animation | None = None
+		self.reset_ui()
 
+	def reset_ui(self) -> None:
+		"""Clear transient widget references so fresh views start clean."""
 		self._built = False
-		self._backdrop: ctk.CTkFrame | None = None
-		self._card: ctk.CTkFrame | None = None
-		self._actions: ctk.CTkFrame | None = None
-		self._navigation: ctk.CTkFrame | None = None
-		self._check_button: ctk.CTkButton | None = None
-		self._back_button: ctk.CTkButton | None = None
 		self.mode: str | None = None
-		self.title_text = ""
 		self.title_label: ctk.CTkLabel | None = None
 		self.progress_bar: ctk.CTkProgressBar | None = None
 		self.progress_label: ctk.CTkLabel | None = None
@@ -60,130 +65,60 @@ class TranslationView:
 		self._failure_count = 0
 		self._peak_progress_value = 0.0
 
-		self._title_font = make_font(size=34, weight="bold")
-		self._section_font = make_font(size=20, weight="bold")
-		self._body_font = make_font(size=18, weight="bold")
-		self._button_font = make_font(size=18, weight="bold")
-		self._feedback_font = make_font(size=18, weight="semibold")
-		self._hint_font = make_font(size=16)
-		self._prompt_font_large = font_mono(44)
-		self._prompt_font_medium = font_mono(34)
-		self._entry_font = font_mono(26)
-
-		register_theme_callback(self._apply_colors)
-
-	def reset_ui(self) -> None:
-		"""Clear transient widget references so fresh views start clean."""
-
-		self._built = False
-		self._backdrop = None
-		self._card = None
-		self._actions = None
-		self._navigation = None
-		self._check_button = None
-		self._back_button = None
-		self.mode = None
-		self.title_text = ""
-		self.title_label = None
-		self.progress_bar = None
-		self.progress_label = None
-		self.prompt_label = None
-		self._prompt_block = None
-		self.entry = None
-		self.feedback_label = None
-		self.hint_label = None
-		self.hint_button = None
-		self.audio_button = None
-		self.prev_button = None
-		self.next_button = None
-		self._failure_count = 0
-		self._peak_progress_value = 0.0
-
 	def _clear_content(self) -> None:
-		"""Destroy this view's children without touching other views."""
-		for w in self.root.winfo_children():
-			w.destroy()
+		for widget in self.root.winfo_children():
+			widget.destroy()
+
+	# Menu ---------------------------------------------------------------------
 
 	def show_menu(self) -> None:
-		"""Display the translation direction selector."""
-
+		"""Choose the source (fixed sentences / random words) and the direction."""
 		self.audio.stop()
 		self.reset_ui()
 		self._clear_content()
 		colors = get_colors()
-		self._set_root_background(colors.backdrop_bg)
+		page = make_page(
+			self.root,
+			title=t("translation.tolkimise_harjutamine"),
+			subtitle=t("translation.vali_suund_milles_soovid"),
+			back=(t("common.tagasi"), self.nav.practice_hub),
+			relwidth=0.7,
+		)
+		spread_rows(page.body, 3)
 
-		backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
-		backdrop.pack(fill="both", expand=True)
-
-		card = make_card(backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
-		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.74, relheight=0.7)
-
-		make_label(
-			card,
-			t("translation.tolkimise_harjutamine"),
-			font=self._title_font,
-			text_color=colors.text_primary,
-		).pack(pady=(36, 16))
-
-		make_label(
-			card,
-			t("translation.vali_suund_milles_soovid"),
-			font=self._section_font,
-			text_color=colors.text_primary,
-			wraplength=640,
-		).pack(pady=(0, 20))
-
-		# Exercise source: the built-in sentences or a new random word drill
 		sources = {
 			t("translation.source_fixed"): "fixed",
 			t("translation.source_random"): "random",
 		}
 		source_toggle = ctk.CTkSegmentedButton(
-			card,
+			page.body,
 			values=list(sources),
 			command=lambda label: self.presenter.set_source(sources[label]),
-			font=self._button_font,
+			font=font_body(),
+			height=40,
+			corner_radius=12,
 		)
 		source_toggle.set(next(k for k, v in sources.items() if v == self.presenter.source))
-		source_toggle.pack(pady=(0, 6))
+		source_toggle.grid(row=1, column=0, pady=(0, 6))
 		make_label(
-			card,
+			page.body,
 			t("translation.source_hint"),
-			font=self._hint_font,
+			font=font_muted(),
 			text_color=colors.text_muted,
-			wraplength=640,
-		).pack(pady=(0, 24))
+			wraplength=620,
+		).grid(row=2, column=0, pady=(0, 36))
 
-		buttons = make_frame(card, fg_color="transparent")
-		buttons.pack(expand=True)
-
-		for idx, (label, callback) in enumerate(
+		directions = make_frame(page.body)
+		directions.grid(row=3, column=0)
+		for column, (label, callback) in enumerate(
 			(
 				(t("common.tekst_morse"), self.show_text_to_morse),
 				(t("common.morse_tekst"), self.show_morse_to_text),
 			)
 		):
-			make_button(
-				buttons,
-				text=label,
-				command=callback,
-				font=self._button_font,
-				variant="primary",
-				width=260,
-				height=66,
-				corner_radius=16,
-			).pack(pady=(0 if idx else 12, 18))
-
-		make_button(
-			card,
-			text=t("common.tagasi_avalehele"),
-			command=self.nav.home,
-			font=self._button_font,
-			variant="danger",
-			width=220,
-			height=44,
-		).pack(pady=(10, 28))
+			make_button(directions, label, command=callback, size="lg", width=260).grid(
+				row=0, column=column, padx=14
+			)
 
 	def show_text_to_morse(self) -> None:
 		self._start_mode("text_to_morse")
@@ -194,311 +129,161 @@ class TranslationView:
 	def _start_mode(self, mode: str) -> None:
 		state = self.presenter.start(mode)
 		if state is None:
-			self._clear_content()
-			colors = get_colors()
-			self._set_root_background(colors.backdrop_bg)
-
-			backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
-			backdrop.pack(fill="both", expand=True)
-
-			card = make_card(backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
-			card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.56, relheight=0.4)
-
-			make_label(
-				card,
-				t("translation.andmeid_pole"),
-				font=self._title_font,
-				text_color=colors.text_primary,
-			).pack(pady=(36, 12))
-			make_label(
-				card,
+			self._show_message(
 				t("translation.tolketreeningu_andmed_puuduvad_palun"),
-				font=self._body_font,
-				text_color=colors.text_muted,
-				wraplength=520,
-			).pack(pady=(0, 32), padx=32)
-
-			make_button(
-				card,
-				text=t("common.tagasi"),
-				command=self.show_menu,
-				font=self._button_font,
-				variant="primary",
-				width=200,
-				height=44,
-			).pack()
+				title=t("translation.andmeid_pole"),
+				error=True,
+			)
 			return
-
 		self._show_translation_view(state)
+
+	# Exercise -----------------------------------------------------------------
 
 	def _show_translation_view(self, state: TranslationState) -> None:
 		previous_mode = self.mode
-
-		# Only rebuild UI if widgets don't exist yet
-		need_initial_build = (
-			not self._built or self.prompt_label is None or self.progress_bar is None
-		)
-
 		self.mode = state.mode
-		self.title_text = state.title
 		self._failure_count = 0
 		self.audio.stop()
-
-		if need_initial_build:
+		if not self._built:
 			self._build_translation_ui(state)
 			return
-
-		# Mode changed - reset progress peak but don't rebuild UI
 		if previous_mode != state.mode:
 			self._peak_progress_value = 0.0
-
 		self._update_translation_content(state, animated=True)
-		self.entry.focus()  # type: ignore[union-attr]
+		if self.entry is not None:
+			self.entry.focus()
 
 	def _build_translation_ui(self, state: TranslationState) -> None:
 		self._clear_content()
 		colors = get_colors()
-		self._set_root_background(colors.backdrop_bg)
-
-		self._backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
-		self._backdrop.pack(fill="both", expand=True)
-
-		self._card = make_card(
-			self._backdrop, fg_color=colors.card_bg, border_color=colors.card_border
+		page = make_page(
+			self.root,
+			title=state.title,
+			back=(t("common.tagasi_valikute_juurde"), self.show_menu),
 		)
-		self._card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.82, relheight=0.84)
+		self.title_label = page.title_label
 
-		self._card.grid_columnconfigure(0, weight=1)
-		self._card.grid_rowconfigure(3, weight=1)
-
-		self.title_label = make_label(
-			self._card, state.title, font=self._title_font, text_color=colors.text_primary
-		)
-		self.title_label.grid(row=0, column=0, pady=(32, 12))
-
+		progress = make_frame(page.header)
+		progress.grid(row=2, column=0, sticky="ew", pady=(10, 0), padx=60)
+		progress.grid_columnconfigure(0, weight=1)
 		self.progress_bar = make_progress_bar(
-			self._card,
-			root=self.root,
-			width=560,
-			height=14,
-			progress_color=colors.success_text,
+			progress, root=self.root, height=10, progress_color=colors.success_text
 		)
-		self.progress_bar.grid(row=1, column=0, padx=48, pady=(0, 16), sticky="ew")
-
+		self.progress_bar.grid(row=0, column=0, sticky="ew")
 		self.progress_label = make_label(
-			self._card, state.progress_text, font=self._body_font, text_color=colors.text_muted
+			progress, state.progress_text, font=font_body(), text_color=colors.text_muted
 		)
-		self.progress_label.grid(row=2, column=0, padx=48, pady=(0, 24))
+		self.progress_label.grid(row=1, column=0, pady=(6, 0))
 
-		self._prompt_block = make_frame(self._card, fg_color=colors.section_bg, corner_radius=24)
-		self._prompt_block.grid(row=3, column=0, padx=48, pady=(0, 28), sticky="nsew")
-		self._prompt_block.grid_rowconfigure(0, weight=1)
-		self._prompt_block.grid_columnconfigure(0, weight=1)
-
-		prompt_font = (
-			self._prompt_font_large if state.prompt_style == "large" else self._prompt_font_medium
-		)
+		# Prompt takes the spare height; answer area sits below it.
+		body = page.body
+		body.grid_rowconfigure(0, weight=1)
+		self._prompt_block = make_frame(body, fg_color=colors.section_bg, corner_radius=24)
+		self._prompt_block.grid(row=0, column=0, sticky="nsew", pady=(8, 16))
 		self.prompt_label = make_label(
-			self._prompt_block,
-			state.prompt,
-			font=prompt_font,
-			text_color=colors.text_primary,
-			wraplength=420,
+			self._prompt_block, state.prompt, font=self._prompt_font_medium, wraplength=900
 		)
-		self.prompt_label.grid(row=0, column=0, padx=32, pady=28, sticky="nsew")
-		self._prompt_block.update_idletasks()
-		self.prompt_label.configure(wraplength=max(self._prompt_block.winfo_width() - 64, 420))
+		self.prompt_label.place(relx=0.5, rely=0.5, anchor="center")
 
+		answer = make_frame(body)
+		answer.grid(row=1, column=0)
 		self.entry = make_entry(
-			self._card,
+			answer,
 			font=self._entry_font,
-			width=520,
-			height=48,
+			width=640,
+			height=50,
 			corner_radius=12,
 			placeholder_text=t("translation.sisesta_morsekood_nt")
 			if state.mode == "text_to_morse"
 			else t("translation.sisesta_tekst"),
 		)
-		self.entry.grid(row=4, column=0, pady=(0, 16))
-		self.entry.bind("<Return>", self._on_translation_enter)
-		self.entry.bind("<KP_Enter>", self._on_translation_enter)
+		self.entry.grid(row=0, column=0, columnspan=3)
+		self.entry.bind("<Return>", lambda _e: self.check_translation_answer())
+		self.entry.bind("<KP_Enter>", lambda _e: self.check_translation_answer())
+		self.feedback_label = make_label(answer, " ", font=font_body())
+		self.feedback_label.grid(row=1, column=0, columnspan=3, pady=(10, 0))
+		self.hint_label = make_label(answer, "", font=font_muted(), text_color=colors.text_muted)
+		self.hint_label.grid(row=2, column=0, columnspan=3, pady=(4, 0))
 
-		self.feedback_label = make_label(
-			self._card, "", font=self._feedback_font, text_color=colors.text_muted
-		)
-		self.feedback_label.grid(row=5, column=0, pady=(0, 12))
-
-		self.hint_label = make_label(
-			self._card, "", font=self._hint_font, text_color=colors.text_primary
-		)
-		self.hint_label.grid(row=6, column=0, pady=(0, 16))
-
-		self._actions = make_frame(self._card, fg_color="transparent")
-		self._actions.grid(row=7, column=0, pady=(0, 12))
-
-		self._check_button = make_button(
-			self._actions,
-			text=t("translation.kontrolli_vastust"),
-			command=self.check_translation_answer,
-			font=self._button_font,
-			variant="primary",
-			width=200,
-			height=44,
-		)
-		self._check_button.grid(row=0, column=0, padx=12, pady=10)
-
-		self.hint_button = make_button(
-			self._actions,
-			text=t("translation.naita_vihjet"),
-			command=self.show_translation_hint,
-			font=self._button_font,
-			variant="primary",
-			width=180,
-			height=44,
-		)
-		self.hint_button.grid(row=0, column=1, padx=12, pady=10)
-
-		self.audio_button = make_button(
-			self._actions,
-			text=t("common.esita_heli"),
-			command=self.play_translation_audio,
-			font=self._button_font,
-			variant="positive",
-			width=180,
-			height=44,
-		)
-		self.audio_button.grid(row=0, column=2, padx=12, pady=10)
-
-		self._navigation = make_frame(self._card, fg_color="transparent")
-		self._navigation.grid(row=8, column=0, pady=(0, 20))
-
+		left, center, right = (footer_group(page.footer, c) for c in (0, 1, 2))
 		self.prev_button = make_button(
-			self._navigation,
-			text=t("common.liigu_tagasi"),
-			command=self.translation_previous,
-			font=self._button_font,
-			variant="muted",
-			width=180,
-			height=44,
+			left, t("common.liigu_tagasi"), command=self.translation_previous, variant="secondary"
 		)
-		self.prev_button.grid(row=0, column=0, padx=12, pady=10)
-
-		self.next_button = make_button(
-			self._navigation,
-			text=state.next_label,
-			command=self.translation_next,
-			font=self._button_font,
+		self.prev_button.grid(row=0, column=0)
+		self.hint_button = make_button(
+			center,
+			t("translation.naita_vihjet"),
+			command=self.show_translation_hint,
 			variant="secondary",
-			width=200,
-			height=44,
+			width=140,
 		)
-		self.next_button.grid(row=0, column=1, padx=12, pady=10)
-
-		self._back_button = make_button(
-			self._card,
-			text=t("common.tagasi_valikute_juurde"),
-			command=self.show_menu,
-			font=self._button_font,
-			variant="danger",
-			width=240,
-			height=44,
+		self.hint_button.grid(row=0, column=0, padx=(0, 16))
+		make_button(
+			center,
+			t("translation.kontrolli_vastust"),
+			command=self.check_translation_answer,
+			size="lg",
+		).grid(row=0, column=1)
+		self.audio_button = make_button(
+			center,
+			t("common.esita_heli"),
+			command=self.play_translation_audio,
+			variant="secondary",
+			width=140,
 		)
-		self._back_button.grid(row=9, column=0, pady=(0, 28))
+		self.audio_button.grid(row=0, column=2, padx=(16, 0))
+		self.next_button = make_button(
+			right, state.next_label, command=self.translation_next, variant="secondary"
+		)
+		self.next_button.grid(row=0, column=0)
 
 		self._built = True
 		self._update_translation_content(state, animated=False)
 		self.entry.focus()
 
 	def _update_translation_content(self, state: TranslationState, *, animated: bool) -> None:
+		colors = get_colors()
 		if self.title_label:
 			self.title_label.configure(text=state.title)
-
 		if self.progress_bar:
-			previous_peak = self._peak_progress_value
-			current_value = max(0.0, min(100.0, state.progress_value))
-			if current_value > previous_peak:
-				self._peak_progress_value = current_value
-			display_value = self._peak_progress_value / 100.0
-			should_animate = animated and self._peak_progress_value > previous_peak
-			self.progress_bar.set_progress(display_value, animated=should_animate)
-
+			current = max(0.0, min(100.0, state.progress_value))
+			grew = current > self._peak_progress_value
+			self._peak_progress_value = max(self._peak_progress_value, current)
+			self.progress_bar.set_progress(
+				self._peak_progress_value / 100.0, animated=animated and grew
+			)
 		if self.progress_label:
-			progress_text = t("common.progress", percent=self._peak_progress_value)
-			self.progress_label.configure(text=progress_text)
-
+			self.progress_label.configure(
+				text=t("common.progress", percent=self._peak_progress_value)
+			)
 		if self.prompt_label:
-			prompt_font = (
+			font = (
 				self._prompt_font_large
 				if state.prompt_style == "large"
 				else self._prompt_font_medium
 			)
-			self.prompt_label.configure(text=state.prompt, font=prompt_font)
-
-		if self._prompt_block and self.prompt_label:
-			self._prompt_block.update_idletasks()
-			self.prompt_label.configure(wraplength=max(self._prompt_block.winfo_width() - 64, 420))
-
+			self.prompt_label.configure(text=pretty_morse(state.prompt), font=font)
+			if animated:
+				tween_color(
+					self.prompt_label, "text_color", colors.section_bg, colors.text_primary, 200
+				)
 		if self.entry:
 			self.entry.delete(0, "end")
-
-		if self.feedback_label:
-			self._set_feedback("", True)
-
+		self._set_feedback(" ", True)
 		if self.hint_label:
 			self.hint_label.configure(text="")
-
 		if self.hint_button:
 			self.hint_button.configure(state="disabled")
-
 		if self.audio_button:
 			if state.audio_available and self.audio.available:
-				self.audio_button.configure(state="normal")
 				self.audio_button.grid()
 			else:
-				self.audio_button.configure(state="disabled")
 				self.audio_button.grid_remove()
-
 		if self.prev_button:
-			state_value = "normal" if state.has_previous else "disabled"
-			self.prev_button.configure(state=state_value)
-
+			self.prev_button.configure(state="normal" if state.has_previous else "disabled")
 		if self.next_button:
 			self.next_button.configure(text=state.next_label)
-
 		self._failure_count = 0
-
-	def _apply_colors(self) -> None:
-		"""Update all widget colors to match the current theme without rebuilding."""
-		if not self._built:
-			return
-		colors = get_colors()
-
-		# Root / backdrop
-		self._set_root_background(colors.backdrop_bg)
-		if self._backdrop:
-			self._backdrop.configure(fg_color=colors.backdrop_bg)
-
-		# Card
-		if self._card:
-			self._card.configure(fg_color=colors.card_bg, border_color=colors.card_border)
-
-		# Prompt block
-		if self._prompt_block:
-			self._prompt_block.configure(fg_color=colors.section_bg)
-
-		# Labels
-		if self.title_label:
-			self.title_label.configure(text_color=colors.text_primary)
-		if self.progress_label:
-			self.progress_label.configure(text_color=colors.text_muted)
-		if self.prompt_label:
-			self.prompt_label.configure(text_color=colors.text_primary)
-		if self.hint_label:
-			self.hint_label.configure(text_color=colors.text_primary)
-
-		# Progress bar
-		if self.progress_bar:
-			self.progress_bar.configure(progress_color=colors.success_text)
 
 	def translation_next(self) -> None:
 		if not self.mode:
@@ -512,37 +297,33 @@ class TranslationView:
 	def translation_previous(self) -> None:
 		if not self.mode:
 			return
-		state = self.presenter.previous()
-		self._show_translation_view(state)
+		self._show_translation_view(self.presenter.previous())
 
 	def show_translation_hint(self) -> None:
 		if not self.mode or not self.hint_label or not self.hint_button:
 			return
 		if self.hint_button.cget("state") == "disabled":
 			return
-		self.hint_label.configure(text=f"Vihje: {self.presenter.hint()}")
+		self.hint_label.configure(text=t("translation.hint", answer=self.presenter.hint()))
 
 	def check_translation_answer(self) -> None:
 		if not self.mode or not self.entry:
 			return
-
-		kasutaja = self.entry.get()
-		on_oige, _ = self.presenter.check_answer(kasutaja)
-
-		if on_oige:
+		correct, _ = self.presenter.check_answer(self.entry.get())
+		if correct:
 			self._set_feedback(t("translation.oige_vastus_tubli_too"), True)
 			if self.hint_label:
 				self.hint_label.configure(text="")
 			if self.hint_button:
 				self.hint_button.configure(state="disabled")
 			self._failure_count = 0
-		else:
-			self._failure_count += 1
-			self._set_feedback(t("translation.vale_vastus_proovi_uuesti"), False)
-			if self._failure_count >= 5 and self.hint_button:
-				self.hint_button.configure(state="normal")
-				if self.hint_label:
-					self.hint_label.configure(text=t("translation.vihje_on_saadaval_kui"))
+			return
+		self._failure_count += 1
+		self._set_feedback(t("translation.vale_vastus_proovi_uuesti"), False)
+		if self._failure_count >= _HINT_AFTER_FAILURES and self.hint_button:
+			self.hint_button.configure(state="normal")
+			if self.hint_label:
+				self.hint_label.configure(text=t("translation.vihje_on_saadaval_kui"))
 
 	def play_translation_audio(self) -> None:
 		morse = self.presenter.audio_morse()
@@ -555,72 +336,40 @@ class TranslationView:
 			self._set_feedback(t("common.heli_ei_onnestunud_esitada"), False)
 
 	def _set_feedback(self, text: str, success: bool) -> None:
+		"""Feedback fades in from the card colour so it doesn't flash."""
 		if not self.feedback_label:
 			return
 		colors = get_colors()
-		värv = colors.success_text if success else colors.error_text
-		self.feedback_label.configure(text=text, text_color=värv)
+		color = colors.success_text if success else colors.error_text
+		self.feedback_label.configure(text=text)
+		self._feedback_fade = tween_color(
+			self.feedback_label, "text_color", colors.card_bg, color, 220, self._feedback_fade
+		)
 
-	def _on_translation_enter(self, _event: object) -> None:
-		self.check_translation_answer()
+	# Completion ---------------------------------------------------------------
 
 	def show_completion(self) -> None:
-		"""Display the completion message and reset sessions for a fresh run."""
-
+		"""Show the finish message and reset sessions for a fresh run."""
 		self.audio.stop()
-		self._clear_content()
 		self.nav.reset_translation()
-		colors = get_colors()
-		self._set_root_background(colors.backdrop_bg)
-
-		backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
-		backdrop.pack(fill="both", expand=True)
-
-		card = make_card(backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
-		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.62, relheight=0.52)
-
-		card.grid_columnconfigure(0, weight=1)
-		card.grid_rowconfigure(1, weight=1)
-
-		make_label(
-			card, t("common.lopp"), font=self._title_font, text_color=colors.text_primary
-		).grid(row=0, column=0, pady=(36, 24))
-
-		message_block = make_frame(card, fg_color=colors.section_bg, corner_radius=28)
-		message_block.grid(row=1, column=0, padx=36, pady=(0, 36), sticky="nsew")
-		message_block.grid_rowconfigure(0, weight=1)
-		message_block.grid_columnconfigure(0, weight=1)
-
-		message_label = make_label(
-			message_block,
-			t("translation.tubli_joudsid_loppu_vajuta"),
-			font=make_font(size=22, weight="bold"),
-			text_color=colors.text_muted,
-		)
-		message_label.grid(row=0, column=0, padx=32, pady=28, sticky="nsew")
-		message_block.update_idletasks()
-		message_label.configure(wraplength=max(message_block.winfo_width() - 64, 360))
-
-		button_row = make_frame(card, fg_color="transparent")
-		button_row.grid(row=2, column=0, pady=(0, 32))
-
-		make_button(
-			button_row,
-			text=t("common.ok"),
-			command=self.show_menu,
-			font=self._button_font,
-			variant="positive",
-			width=200,
-			height=48,
-		).pack()
-
 		self.reset_ui()
+		self._show_message(t("translation.tubli_joudsid_loppu_vajuta"), title=t("common.lopp"))
 
-	def _set_root_background(self, color: str) -> None:
-		try:
-			self.root.configure(fg_color=color)
-		except TclError:
-			try:
-				self.root.configure(bg=color)
-			except TclError:
-				pass
+	def _show_message(self, message: str, *, title: str, error: bool = False) -> None:
+		self._clear_content()
+		colors = get_colors()
+		page = make_page(self.root, title=title, relwidth=0.56, relheight=0.56)
+		spread_rows(page.body, 2)
+		make_label(
+			page.body,
+			message,
+			font=font_body(),
+			text_color=colors.error_text if error else colors.text_primary,
+			wraplength=560,
+		).grid(row=1, column=0, pady=(0, 24))
+		make_button(page.body, t("common.ok"), command=self.show_menu, size="lg", width=200).grid(
+			row=2, column=0
+		)
+
+
+__all__ = ["TranslationView"]

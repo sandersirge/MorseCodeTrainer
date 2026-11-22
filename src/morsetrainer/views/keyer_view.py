@@ -10,8 +10,20 @@ import customtkinter as ctk
 from ..controllers.keyer_controller import KeyerPresenter, KeyerState
 from ..navigator import Navigator
 from ..strings import t
+from .motion import Animation, blend, tween_color
 from .theme import get_colors
-from .widgets import font_mono, make_button, make_card, make_font, make_frame, make_label
+from .widgets import (
+	accent_color,
+	font_body,
+	font_mono,
+	font_muted,
+	footer_group,
+	make_button,
+	make_frame,
+	make_label,
+	make_page,
+	pretty_morse,
+)
 
 # Holding a key auto-repeats. Windows repeats only KeyPress (the decoder ignores
 # those); X11 sends KeyRelease+KeyPress pairs, so a release only counts if no
@@ -28,12 +40,10 @@ class KeyerView:
 		self.nav = nav
 		self.audio = audio_player
 		self.presenter = presenter
-		self._title_font = make_font(size=34, weight="bold")
-		self._body_font = make_font(size=18, weight="bold")
-		self._hint_font = make_font(size=16)
 		self._target_font = font_mono(40)
 		self._mono_font = font_mono(26)
-		self._button_font = make_font(size=18, weight="bold")
+		self._pad_label: ctk.CTkLabel | None = None
+		self._pad_fade: Animation | None = None
 		self._labels: dict[str, ctk.CTkLabel] = {}
 		self._pad: ctk.CTkFrame | None = None
 		self._pending_release: str | None = None
@@ -54,76 +64,62 @@ class KeyerView:
 
 	def _build(self) -> None:
 		colors = get_colors()
-		try:
-			self.root.configure(fg_color=colors.backdrop_bg)
-		except TclError:
-			pass
-		backdrop = make_frame(self.root, fg_color=colors.backdrop_bg)
-		backdrop.pack(fill="both", expand=True)
-		card = make_card(backdrop, fg_color=colors.card_bg, border_color=colors.card_border)
-		card.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.8, relheight=0.86)
-
-		make_label(card, t("keyer.title"), font=self._title_font).pack(pady=(32, 8))
-		make_label(
-			card,
-			t("keyer.intro"),
-			font=self._hint_font,
-			text_color=colors.text_muted,
-			wraplength=820,
-		).pack(pady=(0, 16))
-
-		self._labels["target"] = make_label(card, "", font=self._target_font)
+		page = make_page(
+			self.root,
+			title=t("keyer.title"),
+			subtitle=t("keyer.intro"),
+			back=(t("common.tagasi"), self._go_back),
+		)
+		body = page.body
+		# Target on top, the key pad fills the middle, what you sent below it.
+		body.grid_rowconfigure(1, weight=1)
+		target = make_frame(body)
+		target.grid(row=0, column=0, pady=(4, 12))
+		self._labels["target"] = make_label(target, "", font=self._target_font)
 		self._labels["target"].pack()
 		self._labels["target_morse"] = make_label(
-			card, "", font=self._mono_font, text_color=colors.text_muted
+			target, "", font=self._mono_font, text_color=colors.text_muted
 		)
-		self._labels["target_morse"].pack(pady=(0, 14))
+		self._labels["target_morse"].pack()
 
 		self._pad = make_frame(
-			card,
+			body,
 			fg_color=colors.section_bg,
 			corner_radius=24,
 			border_width=2,
 			border_color=colors.card_border,
 		)
-		self._pad.pack(fill="x", padx=120, pady=(0, 14), ipady=18)
-		pad_label = make_label(
-			self._pad, t("keyer.pad"), font=self._body_font, text_color=colors.text_muted
+		self._pad.grid(row=1, column=0, sticky="nsew", padx=40, pady=(0, 14))
+		self._pad_label = make_label(
+			self._pad, t("keyer.pad"), font=font_body(), text_color=colors.text_muted
 		)
-		pad_label.pack(expand=True, pady=18)
-		for widget in (self._pad, pad_label):
+		self._pad_label.place(relx=0.5, rely=0.5, anchor="center")
+		for widget in (self._pad, self._pad_label):
 			widget.bind("<ButtonPress-1>", self._on_press)
 			widget.bind("<ButtonRelease-1>", self._on_release)
+			widget.configure(cursor="hand2")
 
-		self._labels["sent_morse"] = make_label(card, "", font=self._mono_font, wraplength=860)
-		self._labels["sent_morse"].pack(pady=(0, 4))
-		self._labels["sent_text"] = make_label(card, "", font=self._target_font)
-		self._labels["sent_text"].pack(pady=(0, 4))
-		self._labels["status"] = make_label(card, "", font=self._body_font)
-		self._labels["status"].pack(pady=(0, 6))
+		sent = make_frame(body)
+		sent.grid(row=2, column=0, pady=(0, 4))
+		self._labels["sent_morse"] = make_label(sent, "", font=self._mono_font, wraplength=860)
+		self._labels["sent_morse"].pack()
+		self._labels["sent_text"] = make_label(sent, "", font=self._target_font)
+		self._labels["sent_text"].pack()
+		self._labels["status"] = make_label(sent, "", font=font_body())
+		self._labels["status"].pack(pady=(2, 0))
 		self._labels["speed"] = make_label(
-			card, "", font=self._hint_font, text_color=colors.text_muted
+			sent, "", font=font_muted(), text_color=colors.text_muted
 		)
-		self._labels["speed"].pack(pady=(0, 10))
+		self._labels["speed"].pack(pady=(2, 0))
 
-		footer = make_frame(card)
-		footer.pack(side="bottom", pady=(0, 24))
-		for column, (text, command, variant) in enumerate(
-			(
-				(t("keyer.check"), self._check, "primary"),
-				(t("keyer.clear"), self._clear, "muted"),
-				(t("keyer.new_word"), self._new_word, "secondary"),
-				(t("common.tagasi_avalehele"), self._go_home, "danger"),
-			)
-		):
-			make_button(
-				footer,
-				text=text,
-				command=command,
-				font=self._button_font,
-				variant=variant,
-				width=180,
-			).grid(row=0, column=column, padx=8)
+		left, center, right = (footer_group(page.footer, c) for c in (0, 1, 2))
+		make_button(left, t("keyer.clear"), command=self._clear, variant="secondary").grid(
+			row=0, column=0
+		)
+		make_button(center, t("keyer.check"), command=self._check, size="lg").grid(row=0, column=0)
+		make_button(right, t("keyer.new_word"), command=self._new_word, variant="secondary").grid(
+			row=0, column=0
+		)
 
 	# Key handling -----------------------------------------------------------------
 
@@ -182,11 +178,16 @@ class KeyerView:
 		self._render(self.presenter.current_state())
 
 	def _set_pad_active(self, active: bool) -> None:
+		"""Light the pad up while the key is down (fast fade, so keying feels direct)."""
 		if self._pad is None:
 			return
 		colors = get_colors()
+		lit = blend(colors.section_bg, accent_color(), 0.28)
+		start, end = (colors.section_bg, lit) if active else (lit, colors.section_bg)
 		try:
-			self._pad.configure(border_color=colors.focus_ring if active else colors.card_border)
+			self._pad.configure(border_color=accent_color() if active else colors.card_border)
+			self._pad_fade = tween_color(self._pad, "fg_color", start, end, 60, self._pad_fade)
+			self._pad_label.configure(fg_color=end if not active else lit)
 		except TclError:
 			pass
 
@@ -209,7 +210,7 @@ class KeyerView:
 	def _render(self, state: KeyerState) -> None:
 		colors = get_colors()
 		self._labels["target"].configure(text=t("keyer.target", word=state.target))
-		self._labels["target_morse"].configure(text=state.target_morse)
+		self._labels["target_morse"].configure(text=pretty_morse(state.target_morse))
 		self._labels["sent_morse"].configure(text=state.sent_morse or " ")
 		self._labels["sent_text"].configure(text=state.sent_text or " ")
 		if state.checked:
@@ -235,13 +236,13 @@ class KeyerView:
 	def _new_word(self) -> None:
 		self._render(self.presenter.new_target())
 
-	def _go_home(self) -> None:
+	def _go_back(self) -> None:
 		self.audio.stop_tone()
 		self._unbind_keys()
 		if self._tick_job is not None:
 			self.root.after_cancel(self._tick_job)
 			self._tick_job = None
-		self.nav.home()
+		self.nav.practice_hub()
 
 
 __all__ = ["KeyerView"]

@@ -148,3 +148,30 @@ class TestApplicationWiring:
 		app.test_view = MagicMock()
 		app.reset_test_state()
 		app.test_view.reset_state.assert_called_once()
+
+	def test_hubs_show_and_stop_audio(self, app, deps):
+		app.learn_hub = MagicMock()
+		app.practice_hub = MagicMock()
+		app.show_learn_hub()
+		app.show_practice_hub()
+		app.learn_hub.show.assert_called_once()
+		app.practice_hub.show.assert_called_once()
+		deps.audio_player.stop.assert_called()
+
+	def test_screen_changes_use_view_stack(self, app):
+		app.view_stack = MagicMock()
+		app.learn_hub = MagicMock()
+		order = []
+		app.learn_hub.show.side_effect = lambda: order.append("build")
+		app.view_stack.show.side_effect = lambda *a, **k: order.append("slide")
+		app.show_learn_hub()
+		app.view_stack.show.assert_called_with("learn_hub", animated=True)
+		assert order == ["build", "slide"]  # built before it slides in
+
+
+class TestScreenDepths:
+	def test_hubs_sit_between_home_and_exercises(self):
+		from morsetrainer.application import SCREEN_DEPTHS
+
+		assert SCREEN_DEPTHS["home"] < SCREEN_DEPTHS["learn_hub"] < SCREEN_DEPTHS["flashcard"]
+		assert SCREEN_DEPTHS["practice_hub"] < SCREEN_DEPTHS["keyer"]

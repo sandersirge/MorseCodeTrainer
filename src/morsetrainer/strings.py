@@ -87,8 +87,32 @@ ET: dict[str, str] = {
 	"grade.punktisumma_pole_just_koige": "Tulemus on nõrk, kuid arenguruumi on palju. Harjuta ja proovi uuesti.",
 	"grade.score": "Õigeid vastuseid: {points} / {max_points}",
 	"grade.vaga_super_oled_testi": "Suurepärane!\nVõid end nimetada morsekoodi meistriks.",
+	# loading screen
+	"splash.audio": "Valmistan heli ette…",
+	"splash.data": "Laadin harjutusi ja edenemist…",
+	"splash.ready": "Valmis!",
+	"splash.screens": "Ehitan ekraane…",
+	"splash.starting": "Käivitan…",
+	# hubs (two-level home menu)
+	"hub.cards_description": "Tähed, numbrid ja märgid kaartidel koos heliga.",
+	"hub.keyer_description": "Saada morset tühikuklahviga ja näe, mis välja tuli.",
+	"hub.koch_description": "Kuula märgirühmi ja kirjuta kuuldu; 90% avab uue märgi.",
+	"hub.learn_subtitle": "Õpi märke silmaga või kõrvaga.",
+	"hub.learn_title": "Õpe",
+	"hub.practice_subtitle": "Harjuta tõlkimist või saatmist.",
+	"hub.practice_title": "Harjutused",
+	"hub.translation_description": "Tõlgi mõlemas suunas valmislauseid või juhuslikke sõnu.",
 	# home and introduction
-	"home.harjutused": "Tõlkeharjutused",
+	"home.caption_intro": "Kuidas morsekood töötab",
+	"home.caption_learn": "Märkide õpe ja kõrvaõpe",
+	"home.caption_practice": "Tõlkimine ja võtmeharjutus",
+	"home.caption_sandbox": "Vaba tõlkimine ja heliseaded",
+	"home.caption_test": "Taimeriga test ja hinne",
+	"home.ope_cards": "Märkide õpe",
+	"home.translation": "Tõlkeharjutused",
+	"intro.modes_heading": "Režiimid",
+	"intro.timing_heading": "Ajastus",
+	"home.harjutused": "Harjutused",
 	"home.keyer": "Võtmeharjutus",
 	"home.koch": "Kõrvaõpe",
 	"home.morsekood_moodab_aega_uhikutes": (
@@ -98,7 +122,7 @@ ET: dict[str, str] = {
 		"sõnu kolm tühikut või kaldkriips (/)."
 	),
 	"home.morsekoodi_rakendus": "Morsekoodi treener",
-	"home.ope": "Märkide õpe",
+	"home.ope": "Õpe",
 	"home.ope_voimaldab_flashcard_meetodi": (
 		"Märkide õpe: tähed, numbrid ja kirjavahemärgid kaartidel koos heliga; märgid, mida ei "
 		"teadnud, tulevad sagedamini.\n"
@@ -203,6 +227,7 @@ ET: dict[str, str] = {
 	# translation exercises
 	"translation.andmeid_pole": "Harjutusi pole",
 	"translation.heli_esitatakse": "Esitan heli…",
+	"translation.hint": "Vihje: {answer}",
 	"translation.kontrolli_vastust": "Kontrolli",
 	"translation.naita_vihjet": "Vihje",
 	"translation.oige_vastus_tubli_too": "Õige! Tubli.",

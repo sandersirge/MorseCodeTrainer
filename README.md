@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-817%20passing-brightgreen.svg)](#-testing)
+[![Tests](https://img.shields.io/badge/tests-847%20passing-brightgreen.svg)](#-testing)
 
 An interactive Morse code learning application built with Python and CustomTkinter. Learn Morse code with flashcards, Koch-method listening lessons, translation drills, a straight-key practice mode, free-form translation and timed tests. The UI is in Estonian.
 
@@ -72,6 +72,17 @@ or written to the temp folder.
 - **Click-free tones**: each tone fades in and out over 5 ms
 - **No sound device?** The app still starts; play buttons are disabled and saving still works
 
+### 🎨 Interface
+
+- **Two-level menu**: Tutvustus, Õpe (Märkide õpe, Kõrvaõpe), Harjutused (Tõlkeharjutused,
+  Võtmeharjutus), Test, Sandbox
+- **Motion**: loading screen with progress, screens slide in (deeper from the right, back from the
+  left), cards settle into place, buttons fade on hover and darken when pressed, results fade in.
+  Set `MORSETRAINER_NO_ANIMATIONS=1` to turn animations off
+- **Clear button roles**: one filled main action per screen, outline buttons for other actions, red
+  outline for cancel/stop, and a "← back" link in the top-left corner
+- **Full-height layouts** on a faint Morse-pattern background; light and dark themes
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -132,7 +143,7 @@ morse-trainer
 
 ## 🧪 Testing
 
-The project includes **817 tests** covering models, controllers, services, utilities, resources, exceptions and the UI text catalog. Run them from the repository root.
+The project includes **847 tests** covering models, controllers, services, utilities, resources, exceptions and the UI text catalog. Run them from the repository root.
 
 ### Run Tests
 

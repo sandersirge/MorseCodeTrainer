@@ -13,10 +13,16 @@
   without a sound device
 - **Cross-platform UI**: window fits the screen and rescales on resize (`views/window.py`), installed
   fonts per OS, OS light/dark mode, per-OS icons
+- **Interface design**: two-level home menu (`views/hub_view.py`), shared full-height page layout
+  (`make_page` in `views/widgets.py`), button variants primary/positive/secondary/danger/ghost with
+  sizes, faint Morse-pattern background (`views/backdrop.py`)
+- **Motion** (`views/motion.py`): loading screen with staged start-up (`views/splash.py`,
+  `application.build_steps`), slide transitions by menu depth (`view_stack.py`), card settle,
+  hover/press colour tweens, fading feedback; `MORSETRAINER_NO_ANIMATIONS=1` disables them
 - **UI text**: every string in `strings.py` (`t("key")`); concise Estonian wording; English is planned
   (see "Planned: Multi-language support")
 - Controllers hold all domain logic, models expose immutable state, and views stay presentation-only
-- **Tests**: 817 pytest tests, run from the repository root (`pytest`)
+- **Tests**: 847 pytest tests, run from the repository root (`pytest`)
 - **Project layout**: standard src layout, package `src/morsetrainer/`, tests in `tests/`, single
   `run.py` for source checkouts, `morse-trainer` entry point when installed
 - **CI/CD**: lint (whole repo) → tests (Python 3.10–3.14 on Linux, 3.10/3.14 on Windows and macOS) →
