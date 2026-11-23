@@ -191,7 +191,7 @@ MorseCodeTrainer/
 ├── pyproject.toml            # Package metadata, ruff and pytest config
 ├── DEVPLAN.md                # Development roadmap
 ├── docker/                   # Dockerfile and docker-compose.yml
-├── requirements/             # requirements.txt (runtime), requirements-dev.txt
+├── requirements/             # runtime, build (PyInstaller), lint (ruff) and dev (all + tests)
 ├── resources/icons/          # Application icons (ICO, ICNS, PNG)
 ├── reports/                  # HTML test report (generated)
 ├── src/

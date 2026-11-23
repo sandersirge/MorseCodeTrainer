@@ -1,0 +1,3 @@
+# Packaging the desktop app (CI build and release jobs).
+-r requirements.txt
+pyinstaller>=6.0,<7

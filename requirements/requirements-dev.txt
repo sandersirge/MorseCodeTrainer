@@ -1,7 +1,5 @@
--r requirements.txt
-hypothesis>=6.0.0
-pytest>=9.0.2
-pytest-html>=4.2.0
-pyinstaller>=6.0.0
-ruff>=0.4.0
-
+-r requirements-build.txt
+-r requirements-lint.txt
+hypothesis>=6.0,<7
+pytest>=9.0.2,<10
+pytest-html>=4.2,<5

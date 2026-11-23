@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # requirements/*.txt and pyproject.toml carry the same ranges; each package is capped below
+  # its next major version (ruff below its next minor), so a breaking release arrives as a PR.
+  - package-ecosystem: pip
+    directories: ["/", "/requirements"]
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dev-tools:
+        patterns: [hypothesis, pytest, pytest-html, ruff, pyinstaller]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
